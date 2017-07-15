@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
+
 /**
  * Created by mati on 03/03/17.
  */
@@ -61,20 +63,14 @@ public class ProfilesInformationActivity extends BaseActivity {
         loading_bar = (ProgressBar) findViewById(R.id.loading_bar);
         txt_empty = (TextView) findViewById(R.id.txt_empty);
 
-        // use this setting to improve performance if you know that changes
-        // in content do not change the layout size of the RecyclerView
         recyclerView.setHasFixedSize(true);
-
-        // use a linear layout manager
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-
-        // specify an adapter (see also next example)
         adapter = new ProfileAdapter(this, module,new FermatListItemListeners<ProfileInformation>() {
             @Override
             public void onItemClickListener(ProfileInformation data, int position) {
                 Intent intent1 = new Intent(ProfilesInformationActivity.this, ProfileInformationActivity.class);
-                intent1.putExtra(ProfileInformationActivity.INTENT_EXTRA_PROF_KEY, data.getPublicKey());
+                intent1.putExtra(INTENT_EXTRA_PROF_KEY, data.getPublicKey());
                 ProfilesInformationActivity.this.startActivity(intent1);
             }
 
@@ -84,14 +80,6 @@ public class ProfilesInformationActivity extends BaseActivity {
             }
         });
         recyclerView.setAdapter(adapter);
-
-//        container_empty_screen.findViewById(R.id.create_contract).setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//
-//            }
-//        });
-
     }
 
     private void updateView() {

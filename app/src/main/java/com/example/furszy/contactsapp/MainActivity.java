@@ -142,12 +142,6 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
         super.onResume();
     }
 
-    private boolean checkPermission(String permission) {
-        int result = ContextCompat.checkSelfPermission(getApplicationContext(),permission);
-
-        return result == PackageManager.PERMISSION_GRANTED;
-    }
-
     @Override
     public void onClick(View v) {
         int which = v.getId();
@@ -174,7 +168,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
             ModuleRedtooth module = ((App) getApplication()).anRedtooth.getRedtooth();
             Profile profile = module.getProfile();
             if (profile!=null) {
-                String data = ProfileUtils.getProfileURI(profile);
+                String data = ProfileUtils.getProfileURI(profile,module.getPsHost());
                 Util.showQrDialog(MainActivity.this, data);
             }else {
                 Toast.makeText(this,"Profile not created",Toast.LENGTH_LONG).show();

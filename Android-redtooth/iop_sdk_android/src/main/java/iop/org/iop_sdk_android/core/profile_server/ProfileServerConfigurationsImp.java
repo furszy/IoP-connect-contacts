@@ -3,10 +3,10 @@ package iop.org.iop_sdk_android.core.profile_server;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.google.gson.JsonArray;
-
+import org.apache.commons.io.IOUtils;
 import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.HardCodedConstans;
+import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.ProfileServerConfigurations;
 import org.fermat.redtooth.profile_server.model.ProfServerData;
 import org.fermat.redtooth.profile_server.model.Profile;
@@ -14,6 +14,9 @@ import org.fermat.redtooth.profile_server.protocol.IopProfileServer;
 import org.json.JSONArray;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -46,12 +49,16 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
 
     public static final String PREFS_USER_IS_REGISTERED_IN_SERVER = "isRegistered";
     public static final String PREFS_USER_IS_CREATED = "isCreated";
+    public static final String PREFS_SCHEDULE_TIME = "schedule_service_time";
+    public static final String PREFS_BACKUP_FILE_PATH = "backup_file_path";
+    public static final String PREFS_BACKUP_FILE_PASSWORD = "backup_file_password";
+    public static final String PREFS_BACKUP_FILE_ENABLE = "backup_file_enable";
+
+    public static final String PREFS_IS_BACKGROUND_SERVICE_ENABLED = "background_service_enabled";
 
     public static final String PREFS_HOST_PLAN_END_TIME = "endPlanTime";
 
     public static final String PREF_PROTOCOL_VERSION = "version";
-    // static version for now
-    public static final byte[] version = HardCodedConstans.PROTOCOL_VERSION;
     
     private PrivateStorage privateStorage;
 
@@ -64,7 +71,7 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
 
     @Override
     public ProfServerData getMainProfileServer() {
-        return new ProfServerData(getMainServerNetworkId(),getHost(),getPrimaryPort(),getClPort(),getNonClPort(),getAppServicePort(),true);
+        return new ProfServerData(getMainServerNetworkId(),getHost(),getPrimaryPort(),getClPort(),getNonClPort(),getAppServicePort(),true,isRegisteredInServer());
     }
 
     @Override
@@ -73,6 +80,7 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
     }
 
     public String getHost() {
+        //todo: remove this, hardcoded home host..
         return prefs.getString(PREFS_HOST,HardCodedConstans.HOME_HOST);
     }
 
@@ -97,14 +105,11 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         return CryptoBytes.fromHexToBytes(prefs.getString(PREFS_USER_PK,null));
     }
 
-
-    public byte[] getProfileVersion() {
-        try {
-            byte[] bytes = CryptoBytes.fromHexToBytes(prefs.getString(PREFS_USER_VERSION, null));
-            return bytes;
-        }catch (Exception e){
-            return version;
-        }
+    public Version getProfileVersion() {
+        String versionStrHex = prefs.getString(PREFS_USER_VERSION, null);
+        if (versionStrHex==null)return new Version((byte) 1,(byte)0,(byte)0);
+        byte[] bytes = CryptoBytes.fromHexToBytes(versionStrHex);
+        return Version.fromByteArray(bytes);
     }
 
     public boolean isRegisteredInServer() {
@@ -115,9 +120,6 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         return prefs.getBoolean(PREFS_USER_IS_CREATED,false);
     }
 
-    public byte[] getProtocolVersion(){
-        return version;
-    }
 
     public void setHost(String host) {
         final SharedPreferences.Editor edit = prefs.edit();
@@ -146,10 +148,6 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         byte[] privKey = new byte[32];
         privateStorage.getFile(PREFS_USER_PRIV_KEY,privKey);
         return privKey;
-    }
-
-    public void setPrivKey(byte[] privKey){
-        privateStorage.saveFile(PREFS_USER_PRIV_KEY,privKey);
     }
 
     public void setMainPsPrimaryPort(int primaryPort){
@@ -181,21 +179,9 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         edit.apply();
     }
 
-    public void setUserPubKey(String userPubKeyHex){
+    public void setProfileVersion(Version version){
         final SharedPreferences.Editor edit = prefs.edit();
-        edit.putString(PREFS_USER_PK, userPubKeyHex);
-        edit.apply();
-    }
-
-    public void setUserPubKey(byte[] userPubKeyHex){
-        final SharedPreferences.Editor edit = prefs.edit();
-        edit.putString(PREFS_USER_PK, CryptoBytes.toHexString(userPubKeyHex));
-        edit.apply();
-    }
-
-    public void setProfileVersion(byte[] version){
-        final SharedPreferences.Editor edit = prefs.edit();
-        edit.putString(PREFS_USER_VERSION, CryptoBytes.toHexString(version));
+        edit.putString(PREFS_USER_VERSION, CryptoBytes.toHexString(version.toByteArray()));
         edit.apply();
     }
 
@@ -212,10 +198,6 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         edit.apply();
     }
 
-    @Override
-    public File getUserImageFile() {
-        return null;
-    }
 
     @Override
     public org.fermat.redtooth.profile_server.model.KeyEd25519 createUserKeys() {
@@ -225,6 +207,64 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
     @Override
     public org.fermat.redtooth.profile_server.model.KeyEd25519 createNewUserKeys() {
         return new KeyEd25519().generateKeys();
+    }
+
+    @Override
+    public void saveMainProfileServer(ProfServerData profServerData) {
+        setHost(profServerData.getHost());
+        setMainPfClPort(profServerData.getpPort());
+        setMainPsNonClPort(profServerData.getNonCustPort());
+        setMainPfClPort(profServerData.getCustPort());
+        setMainAppServicePort(profServerData.getAppServicePort());
+    }
+
+    @Override
+    public long getScheduleServiceTime() {
+        return getLong(PREFS_SCHEDULE_TIME,0);
+    }
+
+    @Override
+    public void saveScheduleServiceTime(long scheduleTime) {
+        save(PREFS_SCHEDULE_TIME,scheduleTime);
+    }
+
+    @Override
+    public String getBackupProfilePath() {
+        return getString(PREFS_BACKUP_FILE_PATH,null);
+    }
+
+    @Override
+    public void saveBackupPatch(String fileName) {
+        save(PREFS_BACKUP_FILE_PATH,fileName);
+    }
+
+    @Override
+    public void saveBackupPassword(String password) {
+        save(PREFS_BACKUP_FILE_PASSWORD,password);
+    }
+
+    @Override
+    public String getBackupPassword() {
+        return getString(PREFS_BACKUP_FILE_PASSWORD,null);
+    }
+
+    @Override
+    public boolean isScheduleBackupEnabled(){
+        return getBoolean(PREFS_BACKUP_FILE_ENABLE,false);
+    }
+    @Override
+    public void setScheduleBackupEnable(boolean enable){
+        save(PREFS_BACKUP_FILE_ENABLE,enable);
+    }
+
+    @Override
+    public boolean getBackgroundServiceEnable() {
+        return getBoolean(PREFS_IS_BACKGROUND_SERVICE_ENABLED,true);
+    }
+
+    @Override
+    public void setBackgroundServiceEnable(boolean enable) {
+        save(PREFS_IS_BACKGROUND_SERVICE_ENABLED,enable);
     }
 
     /**
@@ -238,6 +278,9 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
 
     @Override
     public void saveProfile(Profile profile) {
+        if (profile.getVersion()!=null){
+            setProfileVersion(profile.getVersion());
+        }
         if (profile.getType()!=null)
             setProfileType(profile.getType());
         if (profile.getExtraData()!=null)
@@ -245,7 +288,19 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
         if (profile.getName()!=null)
             save(PREFS_USER_NAME,profile.getName());
         if (profile.getApplicationServices()!=null && !profile.getApplicationServices().isEmpty()){
-            save(PREFS_APPS_SERVICES,convertToJson(profile.getApplicationServices()));
+            save(PREFS_APPS_SERVICES,convertToJson(profile.getApplicationServices().values()));
+        }
+        if (profile.getHomeHost()!=null){
+            save(PREFS_HOST,profile.getHomeHost());
+        }
+        if (profile.getImg()!=null){
+            try {
+                privateStorage.saveFile(PREFS_USER_IMAGE,profile.getImg());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
     }
 
@@ -258,6 +313,20 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
     public boolean isPairingEnable() {
         // default true for now..
         return true;
+    }
+
+    @Override
+    public Profile getProfile() {
+        Profile profile = new Profile(
+                getProfileVersion(),
+                getUsername(),
+                getProfileType(),
+                "none",
+                getUserImage(),
+                getHost(),
+                getUserKeys()
+        );
+        return profile;
     }
 
 
@@ -306,6 +375,27 @@ public class ProfileServerConfigurationsImp extends Configurations implements Pr
 
     public void setMainServerNetworkId(byte[] networkId) {
         save(PREFS_NETWORK_ID,CryptoBytes.toHexString(networkId));
+    }
+
+    @Override
+    public byte[] getUserImage() {
+        try {
+            File fileImg = privateStorage.getFile(PREFS_USER_IMAGE);
+            if (fileImg.exists()) {
+                FileInputStream fileInputStream = new FileInputStream(fileImg);
+                return IOUtils.toByteArray(fileInputStream);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public File getUserImageFile() {
+        return privateStorage.getFile(PREFS_USER_IMAGE);
     }
 }
 

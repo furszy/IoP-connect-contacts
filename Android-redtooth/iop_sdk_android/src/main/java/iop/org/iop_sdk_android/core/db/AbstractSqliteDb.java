@@ -47,6 +47,13 @@ public abstract class AbstractSqliteDb<T> extends SQLiteOpenHelper {
         return list;
     }
 
+    public Cursor getData(String where) {
+        if (where==null) throw new IllegalArgumentException("where cannot be null");
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor res =  db.rawQuery( "select * from "+getTableName()+" where "+where, null );
+        return res;
+    }
+
     public Cursor getData(String whereColumn,Object whereObjValue) {
         if (whereObjValue==null) throw new IllegalArgumentException("value cannot be null");
         SQLiteDatabase db = this.getReadableDatabase();
@@ -60,6 +67,11 @@ public abstract class AbstractSqliteDb<T> extends SQLiteOpenHelper {
             return buildFrom(cursor);
         }
         return null;
+    }
+
+    public boolean contains(String whereColumn,Object whereObjValue) {
+        Cursor cursor = getData(whereColumn,whereObjValue);
+        return cursor.moveToFirst();
     }
 
     public void updateFieldByKey(String whereColumn,String whereValue, String updateColumn, boolean updateValue) {
@@ -88,8 +100,14 @@ public abstract class AbstractSqliteDb<T> extends SQLiteOpenHelper {
                 new String[] { columnValue });
     }
 
+    public void truncate() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(getTableName(),null,null);
+    }
+
     abstract String getTableName();
     abstract ContentValues buildContent(T obj);
     abstract T buildFrom(Cursor cursor);
+
 
 }

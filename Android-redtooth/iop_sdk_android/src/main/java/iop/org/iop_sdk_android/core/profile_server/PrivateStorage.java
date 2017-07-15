@@ -25,10 +25,11 @@ public class PrivateStorage {
     }
 
     public void getFile(String name,byte[] buff) {
-        File file = context.getDir(name,MODE_PRIVATE);
+        File file = context.getDir("priv",MODE_PRIVATE);
+        File fileTemp = new File(file,name);
         FileInputStream fileInputStream = null;
         try {
-            fileInputStream = new FileInputStream(file);
+            fileInputStream = new FileInputStream(fileTemp);
             fileInputStream.read(buff);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -45,12 +46,27 @@ public class PrivateStorage {
         }
     }
 
-    public void saveFile(String name,byte[] buf){
-        File file = context.getDir(name,MODE_PRIVATE);
+    /**
+     *
+     * @param name
+     * @return
+     */
+    public File getFile(String name) {
+        return new File(context.getDir("priv",MODE_PRIVATE),name);
+    }
 
+
+    public void saveFile(String name,byte[] buf) throws IOException {
+        File file = context.getDir("priv",MODE_PRIVATE);
+        File saveFile = new File(file,name);
+        saveFile.mkdirs();
+        if (saveFile.exists()){
+            saveFile.delete();
+        }
+        saveFile.createNewFile();
         FileOutputStream fileOutputStream = null;
         try {
-            fileOutputStream = new FileOutputStream(file);
+            fileOutputStream = new FileOutputStream(saveFile);
             fileOutputStream.write(buf);
             fileOutputStream.flush();
         } catch (FileNotFoundException e) {
@@ -70,7 +86,7 @@ public class PrivateStorage {
 
     public void savePrivObj(String name,Object obj){
         File file = context.getDir(name,MODE_PRIVATE);
-        File privFile = new File(file.getPath()+"/"+name);
+        File privFile = new File(file,name);
         FileOutputStream fileOutputStream = null;
         ObjectOutputStream objectOutputStream = null;
         try {

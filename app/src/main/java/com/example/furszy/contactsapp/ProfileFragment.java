@@ -20,14 +20,20 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.text.Editable;
+import android.text.InputFilter;
+import android.text.Spanned;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
@@ -42,11 +48,9 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import de.hdodenhof.circleimageview.CircleImageView;
 import static android.app.Activity.RESULT_OK;
-import static org.fermat.redtooth.utils.StringUtils.cleanString;
 
 /**
  * Created by mati on 16/04/17.
@@ -73,13 +77,13 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
     private View root;
     private CircleImageView imgProfile;
     private EditText txt_name;
+    private Switch show_location;
     private Button btn_create;
     private ProgressBar progressBar;
+    private ProgressBar loading_img;
 
     private Profile profile;
     byte[] profImgData;
-    private boolean isUsernameCorrect;
-    private AtomicBoolean lock = new AtomicBoolean(false);
     private boolean isRegistered;
     private int screenState;
     private ExecutorService executor;
@@ -103,7 +107,7 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
 
         module = ((App)getActivity().getApplication()).anRedtooth.getRedtooth();
 
-        getActivity().setTitle("Profile");
+        getActivity().setTitle("Edit Profile");
 
         root = inflater.inflate(R.layout.profile_main,container);
 
@@ -111,9 +115,11 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
 
         imgProfile = (CircleImageView) root.findViewById(R.id.profile_image);
         txt_name = (EditText) root.findViewById(R.id.txt_name);
+        txt_name.setFilters(new InputFilter[]{filter,new InputFilter.LengthFilter(14)});
         progressBar = (ProgressBar) root.findViewById(R.id.progressBar);
-        progressBar = (ProgressBar) root.findViewById(R.id.progressBar);
+        loading_img = (ProgressBar) root.findViewById(R.id.loading_img);
         progressBar.getIndeterminateDrawable().setColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY);
+        loading_img.getIndeterminateDrawable().setColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY);
         progressBar.setVisibility(View.GONE);
         btn_create = (Button) root.findViewById(R.id.btn_create);
         imgProfile.setOnClickListener(new View.OnClickListener() {
@@ -121,6 +127,25 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
             public void onClick(View v) {
                 Intent i = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
                 startActivityForResult(i, RESULT_LOAD_IMAGE);
+            }
+        });
+
+        //Show Locaiton
+
+        show_location = (Switch) root.findViewById(R.id.show_location);
+        show_location.setChecked(false);
+        show_location.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                if(isChecked){
+
+                }else{
+
+                }
+
             }
         });
 
@@ -165,11 +190,13 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
         if (executor==null)
             executor = Executors.newSingleThreadExecutor();
         // init profile
-        profile = module.getProfile();
-        if (profile!=null) {
-            txt_name.setText(profile.getName());
-            if(profile.getImg()!=null && profile.getImg().length>0){
-                imgProfile.setImageBitmap(BitmapFactory.decodeByteArray(profile.getImg(),0,profile.getImg().length));
+        if (module!=null) {
+            profile = module.getProfile();
+            if (profile != null) {
+                txt_name.setText(profile.getName());
+                if (profile.getImg() != null && profile.getImg().length > 0 && profImgData == null) {
+                    imgProfile.setImageBitmap(BitmapFactory.decodeByteArray(profile.getImg(), 0, profile.getImg().length));
+                }
             }
         }
     }
@@ -205,66 +232,13 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
             public void afterTextChanged(Editable s) {
                 String name = s.toString();
                 if (name.length()>3 ){
-                    isUsernameCorrect = true;
                     changeScreenState(UPDATE_SCREEN_STATE);
                 }else {
-                    isUsernameCorrect = false;
                     changeScreenState(DONE_SCREEN_STATE);
                 }
             }
         });
-
     }
-
-    private boolean validateMail(CharSequence email){
-        String regExpn =
-                "^(([\\w-]+\\.)+[\\w-]+|([a-zA-Z]{1}|[\\w-]{2,}))@"
-                        +"((([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])\\.([0-1]?"
-                        +"[0-9]{1,2}|25[0-5]|2[0-4][0-9])\\."
-                        +"([0-1]?[0-9]{1,2}|25[0-5]|2[0-4][0-9])\\.([0-1]?"
-                        +"[0-9]{1,2}|25[0-5]|2[0-4][0-9])){1}|"
-                        +"([a-zA-Z]+[\\w-]+\\.)+[a-zA-Z]{2,4})$";
-
-        Pattern pattern = Pattern.compile(regExpn, Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(email);
-
-        if(matcher.matches())
-            return true;
-        else
-            return false;
-    }
-
-    private void registerUser(final String username){
-
-        if (!lock.getAndSet(true)) {
-            execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        String pubKey = module.registerProfile(username, "contactApp",null,0,0,null);
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setVisibility(View.GONE);
-//                                    buildDialog();
-                            }
-                        });
-                    } catch (final Exception e){
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                buildFailDialog(cleanString(e.getMessage()));
-                                progressBar.setVisibility(View.GONE);
-                            }
-                        });
-                    }
-
-                    lock.set(false);
-                }
-            });
-        }
-    }
-
 
     /**
      * Execute
@@ -272,6 +246,8 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
      * @param runnable
      */
     private void execute(Runnable runnable){
+        if (executor==null)
+            executor = Executors.newSingleThreadExecutor();
         executor.execute(runnable);
     }
 
@@ -285,23 +261,24 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
+
+            loading_img.setVisibility(View.VISIBLE);
+
             Uri selectedImage = data.getData();
             String[] filePathColumn = { MediaStore.Images.Media.DATA };
             Cursor cursor = getActivity().getContentResolver().query(selectedImage,filePathColumn, null, null, null);
             cursor.moveToFirst();
             int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-            String picturePath = cursor.getString(columnIndex);
+            final String picturePath = cursor.getString(columnIndex);
             cursor.close();
-            Bitmap bitmap = BitmapFactory.decodeFile(picturePath);
 
             // scale image
-            imgProfile.setImageBitmap(Bitmap.createScaledBitmap(bitmap, 1024, 1024, false));
-//            imgProfile.setImageBitmap(bitmap);
+            //imgProfile.setImageBitmap(Bitmap.createScaledBitmap(bitmap, 1024, 1024, false));
 
             if( ContextCompat.checkSelfPermission(getActivity(),
                     Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ) {
                 if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                        Manifest.permission.READ_CONTACTS)) {
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
 
                     // Show an expanation to the user *asynchronously* -- don't block
                     // this thread waiting for the user's response! After the user
@@ -318,23 +295,40 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
                 }
             }
 
-            // compress and do it array
-            ByteArrayOutputStream out = null;
-            try {
-                out = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
-                profImgData = out.toByteArray();
-            }catch (Exception e){
-                e.printStackTrace();
-            }finally {
-                try {
-                    if (out != null) {
-                        out.close();
+            execute(new Runnable() {
+                @Override
+                public void run() {
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inSampleSize = 4;
+                    final Bitmap bitmap = BitmapFactory.decodeFile(picturePath,options);
+                    // compress and do it array
+                    ByteArrayOutputStream out = null;
+                    try {
+                        out = new ByteArrayOutputStream();
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+                        profImgData = out.toByteArray();
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }finally {
+                        try {
+                            if (out != null) {
+                                out.close();
+                            }
+                        } catch (IOException e) {
+                            // nothing
+                        }
                     }
-                } catch (IOException e) {
-                    // nothing
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.i("ProfileFragment","setting bitmap profile");
+                            imgProfile.setImageBitmap(Bitmap.createScaledBitmap(bitmap, 1024, 1024, false));
+                            loading_img.setVisibility(View.INVISIBLE);
+                        }
+                    });
                 }
-            }
+            });
+
 
             if (isRegistered){
                 btn_create.setText("Save");
@@ -352,26 +346,24 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
                 IntentFilter intentFilter = new IntentFilter(App.INTENT_ACTION_PROFILE_CONNECTED);
                 ((BaseActivity)getActivity()).localBroadcastManager.registerReceiver(connectionReceiver,intentFilter);
             }
-            executor.submit(new Runnable() {
+            execute(new Runnable() {
                 @Override
                 public void run() {
                     boolean res = false;
                     String detail = null;
                     try {
-                        if (!isIdentityCreated) {
-                            String pk = module.registerProfile(name, "contactApp", profImgData, 0, 0, null);
-                            module.connect(pk);
-                        } else {
-                            MsgListenerFuture listenerFuture = new MsgListenerFuture();
-                            module.updateProfile(
-                                    name,
-                                    profImgData,
-                                    listenerFuture);
-                            listenerFuture.get();
+                        MsgListenerFuture<Boolean> listenerFuture = new MsgListenerFuture();
+                        module.updateProfile(
+                                name,
+                                profImgData,
+                                listenerFuture);
+                        listenerFuture.get();
+                        res = listenerFuture.getStatusDetail()==null;
+                        if (!res){
+                            detail = "Fail, error: "+listenerFuture.getStatusDetail();
                         }
-                        res = true;
                     } catch (Exception e) {
-                        Log.e(TAG, e.getMessage());
+                        Log.e(TAG," exception updating the profile\n" +e.getMessage());
                         detail = "Cant update profile, send report please";
                     }
                     final String finalDetail = detail;
@@ -412,11 +404,11 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
     }
 
 
-    private void checkPermissions() {
-        // Assume thisActivity is the current activity
-        if (Build.VERSION.SDK_INT > 22) {
+      private void checkPermissions() {
+                // Assume thisActivity is the current activity
+                if (Build.VERSION.SDK_INT > 22) {
 
-            int permissionCheck = ContextCompat.checkSelfPermission(getActivity(),
+                    int permissionCheck = ContextCompat.checkSelfPermission(getActivity(),
                     Manifest.permission.READ_EXTERNAL_STORAGE);
 
             // Here, thisActivity is the current activity
@@ -426,7 +418,7 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
 
                 // Should we show an explanation?
                 if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(),
-                        Manifest.permission.READ_CONTACTS)) {
+                        Manifest.permission.READ_EXTERNAL_STORAGE)) {
 
                     // Show an expanation to the user *asynchronously* -- don't block
                     // this thread waiting for the user's response! After the user
@@ -452,7 +444,7 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case 1: {
+            case MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE: {
 
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
@@ -473,5 +465,21 @@ public class ProfileFragment extends Fragment implements View.OnClickListener{
             // permissions this app might request
         }
     }
+    public InputFilter filter = new InputFilter() {
+        @Override
+        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+            for (int i = start; i < end; ++i)
+            {
+                if (!Pattern.compile("[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890]*").matcher(String.valueOf(source.charAt(i))).matches())
+                {
+                    return "";
+                }
+            }
+
+            return null;
+        }
+    };
+
+
 }
 

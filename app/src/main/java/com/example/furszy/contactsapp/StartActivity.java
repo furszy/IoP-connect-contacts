@@ -16,16 +16,16 @@ public class StartActivity extends BaseActivity {
     @Override
     protected void onCreateView(Bundle savedInstanceState, ViewGroup container) {
         getSupportActionBar().hide();
-        getLayoutInflater().inflate(R.layout.fragment_start_activity, container);
+        getLayoutInflater().inflate(R.layout.start_activity, container);
 
         // Open Create Profile
         buttonCreate = (Button) findViewById(R.id.btnCreate);
         buttonCreate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 Intent myIntent = new Intent(v.getContext(), CreateProfileActivity.class);
-                startActivityForResult(myIntent, 0);
+                startActivity(myIntent);
+                finish();
             }
         });
 
@@ -35,7 +35,8 @@ public class StartActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 Intent myIntent = new Intent(v.getContext(), RestoreActivity.class);
-                startActivityForResult(myIntent, 0);
+                startActivity(myIntent);
+                finish();
             }
         });
     }

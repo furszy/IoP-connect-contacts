@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.graphics.BitmapFactory;
 import android.view.View;
 import com.example.furszy.contactsapp.R;
-import com.example.furszy.contactsapp.adapter.FermatAdapterImproved;
+import com.example.furszy.contactsapp.adapter.BaseAdapter;
 import com.example.furszy.contactsapp.adapter.FermatListItemListeners;
 
 import org.fermat.redtooth.profile_server.ModuleRedtooth;
@@ -13,7 +13,7 @@ import org.fermat.redtooth.profile_server.ProfileInformation;
 /**
  * Created by mati on 03/03/17.
  */
-public class ProfileAdapter extends FermatAdapterImproved<ProfileInformation, ProfileHolder> {
+public class ProfileAdapter extends BaseAdapter<ProfileInformation, ProfileHolder> {
 
     ModuleRedtooth module;
 
@@ -31,7 +31,7 @@ public class ProfileAdapter extends FermatAdapterImproved<ProfileInformation, Pr
 
     @Override
     protected int getCardViewResource(int type) {
-        return R.layout.community_proposal_row;
+        return R.layout.my_contacts_row;
     }
 
     @Override

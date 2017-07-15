@@ -4,14 +4,14 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.example.furszy.contactsapp.R;
-import com.example.furszy.contactsapp.adapter.FermatViewHolder;
+import com.example.furszy.contactsapp.adapter.BaseViewHolder;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
 /**
  * Created by mati on 03/03/17.
  */
-public class ProfileHolder extends FermatViewHolder {
+public class ProfileHolder extends BaseViewHolder {
 
     TextView txt_name;
     CircleImageView img;

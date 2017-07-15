@@ -45,9 +45,9 @@ public interface ProfileServer {
 
     ProfSerRequest checkIn(byte[] signedChallenge, Signer signer) throws Exception;
 
-    ProfSerRequest updateProfileRequest(Signer signer,byte[] profilePublicKey,String profType, byte[] version, String name, byte[] img, int latitude, int longitude, String extraData) throws Exception;
+    ProfSerRequest updateProfileRequest(Signer signer,byte[] profilePublicKey,String profType, byte[] version, String name, byte[] img,byte[] imgHash, int latitude, int longitude, String extraData) throws Exception;
 
-    ProfSerRequest updateExtraData(Signer signer,byte[] profilePublicKey,String profType, String extraData) throws Exception;
+   /* ProfSerRequest updateExtraData(Signer signer,byte[] profilePublicKey,String profType, String extraData) throws Exception;*/
 
     ProfSerRequest storeCanDataRequest(CanStoreMap canStoreMap);
 
@@ -93,6 +93,8 @@ public interface ProfileServer {
     void addHandler(PsSocketHandler hanlder);
 
     void closePort(IopProfileServer.ServerRoleType portType) throws IOException;
+
+    void closeCallChannel(String callToken) throws IOException;
 
     void shutdown() throws IOException;
 
