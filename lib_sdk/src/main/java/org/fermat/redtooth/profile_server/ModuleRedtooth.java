@@ -36,19 +36,13 @@ public interface ModuleRedtooth {
 
     void addService(String serviceName, Object... args);
 
+    // moved methods..
     void connect(String pubKey) throws Exception;
-
     String registerProfile(String name,String type, byte[] img, int latitude, int longitude, String extraData) throws Exception;
-
     String registerProfile(String name,byte[] img) throws Exception;
 
     int updateProfile(String name,byte[] img,ProfSerMsgListener<Boolean> msgListener) throws Exception;
-
-    int updateProfile(String pubKey,String name, byte[] img, String extraData, ProfSerMsgListener<Boolean> msgListener) throws Exception;
-
     int updateProfile(String pubKey ,String name, byte[] img, int latitude, int longitude, String extraData, ProfSerMsgListener<Boolean> msgListener) throws Exception;
-
-    int updateProfileExtraData(String pubKey,Signer signer, String extraData) throws Exception;
 
     /**
      * Request pair profile, This will notify to the other user that you want to connect with him.

@@ -11,7 +11,6 @@ import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.ProfileInformation;
 import org.fermat.redtooth.profile_server.imp.ProfileInformationImp;
-import org.fermat.redtooth.profile_server.model.Profile;
 import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,8 +19,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import iop.org.iop_sdk_android.core.profile_server.PrivateStorage;
 
 /**
  * Created by furszy on 5/25/17.
@@ -285,6 +282,20 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         return insertContact(localProfilePubKeyOwnerOfContact,profile);
     }
 
+    /**
+     *
+     * @param localProfilePubKeyOwnerOfContact
+     * @param profile
+     * @return -1 if the profile exists
+     */
+    @Override
+    public long saveProfileIfNotExist(String localProfilePubKeyOwnerOfContact, ProfileInformation profile) {
+        if (!existProfile(localProfilePubKeyOwnerOfContact,profile.getHexPublicKey()))
+            return insertContact(localProfilePubKeyOwnerOfContact,profile);
+        else
+            return -1;
+    }
+
     public void saveOrUpdateProfile(String localProfilePubKeyOwnerOfContact, ProfileInformation profile){
         ProfileInformation dbProf = null;
         if ((dbProf = getProfile(localProfilePubKeyOwnerOfContact,profile.getHexPublicKey()))==null){
@@ -317,6 +328,15 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
             return buildFrom(cursor).profileInformation;
         }
         return null;
+    }
+
+    @Override
+    public boolean existProfile(String localProfileOwnerOfContacts, String pubKey) {
+        Cursor cursor = getData(localProfileOwnerOfContacts,pubKey);
+        if (cursor.moveToFirst()){
+            return true;
+        }
+        return false;
     }
 
     @Override
