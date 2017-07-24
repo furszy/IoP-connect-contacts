@@ -11,6 +11,8 @@ import java.util.List;
 
 public interface PairingRequestsManager {
 
+    void disconnectParingProfile(String localProfilePubKey, String remoteHexPublicKey);
+
     int savePairingRequest(PairingRequest pairingRequest);
 
     int saveIfNotExistPairingRequest(PairingRequest pairingRequest);

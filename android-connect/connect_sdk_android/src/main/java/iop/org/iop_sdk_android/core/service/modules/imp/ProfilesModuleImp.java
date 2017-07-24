@@ -216,9 +216,10 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     }
 
     @Override
-    public void disconnect(Profile profile) {
+    public void disconnectProfile(String remoteHexPublicKey) {
+        Profile profile = connectService.getProfile();
         PairingAppService pairingService = profile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
-        pairingService.disconectProfile();
+        pairingService.disconectProfileService(remoteHexPublicKey);
     }
 
     @Override

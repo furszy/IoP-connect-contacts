@@ -166,8 +166,10 @@ public class PairingAppService extends AppService {
         }
     }
 
-    public void disconectProfile(){
-        profilesManager.disconnectService();
+    public void disconectProfileService(String remoteHexPublicKey){
+        String localHexPublicKey = profileServiceOwner.getHexPublicKey();
+        profilesManager.disconnectProfile(localHexPublicKey, remoteHexPublicKey);
+        pairingRequestsManager.disconnectParingProfile(localHexPublicKey, remoteHexPublicKey);
     }
 
     public PairingListener getPairingListener() {

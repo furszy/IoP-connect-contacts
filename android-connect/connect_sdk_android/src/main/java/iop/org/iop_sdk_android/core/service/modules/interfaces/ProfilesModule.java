@@ -20,7 +20,7 @@ public interface ProfilesModule extends Module {
 
     void connect(String pubKey) throws Exception;
 
-    void disconnect(Profile profile);
+    void disconnectProfile(String remoteHexPublicKey);
 
     int updateProfile(String pubKey , String name, byte[] img, int latitude, int longitude, String extraData, final ProfSerMsgListener<Boolean> msgListener) throws Exception;
 

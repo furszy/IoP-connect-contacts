@@ -63,7 +63,7 @@ public interface ModuleRedtooth {
 
     void refuseChatRequest(String remoteHexPublicKey) throws Exception;
 
-    void disconnectProfile();
+    void disconnectProfile(String remoteHexPublicKey);
 
     void acceptChatRequest(String remoteHexPublicKey, ProfSerMsgListener<Boolean> future) throws Exception;
 
