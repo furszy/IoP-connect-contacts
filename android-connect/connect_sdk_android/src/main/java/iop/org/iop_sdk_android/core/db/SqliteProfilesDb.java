@@ -98,7 +98,14 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         onCreate(db);
     }
 
-    public long insertContact (String localProfileOwnerOfThisContact,ProfileInformation profile) {
+    @Override
+    public void disconnectService() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        db.execSQL("DROP TABLE IF EXISTS contacts");
+        onCreate(db);
+    }
+
+    public long insertContact (String localProfileOwnerOfThisContact, ProfileInformation profile) {
         SQLiteDatabase db = this.getWritableDatabase();
         long id = db.insert(CONTACTS_TABLE_NAME, null, buildContent(profile,localProfileOwnerOfThisContact));
         return id;

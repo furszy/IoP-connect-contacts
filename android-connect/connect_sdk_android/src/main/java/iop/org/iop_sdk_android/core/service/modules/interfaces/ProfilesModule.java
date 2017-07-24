@@ -3,6 +3,7 @@ package iop.org.iop_sdk_android.core.service.modules.interfaces;
 import org.fermat.redtooth.profile_server.engine.listeners.ProfSerMsgListener;
 
 import org.fermat.redtooth.global.Module;
+import org.fermat.redtooth.profile_server.model.Profile;
 
 /**
  * Created by furszy on 7/19/17.
@@ -18,6 +19,8 @@ public interface ProfilesModule extends Module {
     String registerProfile(String name,byte[] img) throws Exception;
 
     void connect(String pubKey) throws Exception;
+
+    void disconnect(Profile profile);
 
     int updateProfile(String pubKey , String name, byte[] img, int latitude, int longitude, String extraData, final ProfSerMsgListener<Boolean> msgListener) throws Exception;
 

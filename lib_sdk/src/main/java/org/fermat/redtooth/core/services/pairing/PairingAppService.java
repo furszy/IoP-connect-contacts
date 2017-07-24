@@ -166,6 +166,10 @@ public class PairingAppService extends AppService {
         }
     }
 
+    public void disconectProfile(){
+        profilesManager.disconnectService();
+    }
+
     public PairingListener getPairingListener() {
         return pairingListener;
     }

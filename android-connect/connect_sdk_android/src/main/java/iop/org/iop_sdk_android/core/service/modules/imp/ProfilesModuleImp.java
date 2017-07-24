@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
 
 import org.fermat.redtooth.core.IoPConnect;
+import org.fermat.redtooth.core.services.pairing.PairingAppService;
 import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.engine.app_services.PairingListener;
 import org.fermat.redtooth.profile_server.engine.futures.BaseMsgFuture;
@@ -13,6 +14,7 @@ import org.fermat.redtooth.profile_server.engine.futures.ConnectionFuture;
 import org.fermat.redtooth.profile_server.engine.listeners.ProfSerMsgListener;
 import org.fermat.redtooth.profile_server.model.KeyEd25519;
 import org.fermat.redtooth.profile_server.model.Profile;
+import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.fermat.redtooth.services.EnabledServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -211,6 +213,12 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     private void broadcastUpdateProfile() {
         Intent intent = new Intent(IntentBroadcastConstants.ACTION_PROFILE_UPDATED_CONSTANT);
         localBroadcastManager.sendBroadcast(intent);
+    }
+
+    @Override
+    public void disconnect(Profile profile) {
+        PairingAppService pairingService = profile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
+        pairingService.disconectProfile();
     }
 
     @Override
