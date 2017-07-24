@@ -8,9 +8,11 @@ import android.support.v4.content.LocalBroadcastManager;
 import org.fermat.redtooth.core.IoPConnect;
 import org.fermat.redtooth.core.services.pairing.PairingAppService;
 import org.fermat.redtooth.global.Version;
+import org.fermat.redtooth.profile_server.ProfileInformation;
 import org.fermat.redtooth.profile_server.engine.app_services.PairingListener;
 import org.fermat.redtooth.profile_server.engine.futures.BaseMsgFuture;
 import org.fermat.redtooth.profile_server.engine.futures.ConnectionFuture;
+import org.fermat.redtooth.profile_server.engine.futures.MsgListenerFuture;
 import org.fermat.redtooth.profile_server.engine.listeners.ProfSerMsgListener;
 import org.fermat.redtooth.profile_server.model.KeyEd25519;
 import org.fermat.redtooth.profile_server.model.Profile;
@@ -216,10 +218,19 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     }
 
     @Override
-    public void disconnectProfile(String remoteHexPublicKey) {
+    public void disconnectProfile(ProfileInformation remoteProfile) {
         Profile profile = connectService.getProfile();
+        String remoteHexPublicKey = remoteProfile.getHexPublicKey();
         PairingAppService pairingService = profile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
         pairingService.disconectProfileService(remoteHexPublicKey);
+
+        MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
+
+        try {
+            ioPConnect.callService(EnabledServices.CHAT.getName(), profile, remoteProfile, false, readyListener);
+        }catch (Exception e){
+            throw e;
+        }
     }
 
     @Override
