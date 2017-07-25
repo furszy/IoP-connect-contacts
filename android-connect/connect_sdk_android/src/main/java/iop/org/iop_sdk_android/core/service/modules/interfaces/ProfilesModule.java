@@ -21,7 +21,7 @@ public interface ProfilesModule extends Module {
 
     void connect(String pubKey) throws Exception;
 
-    void disconnectProfile(ProfileInformation remoteProfileInformation);
+    void disconnectProfile(Profile localProfile, ProfileInformation remoteProfileInformation, final ProfSerMsgListener<Boolean> readyListener);
 
     int updateProfile(String pubKey , String name, byte[] img, int latitude, int longitude, String extraData, final ProfSerMsgListener<Boolean> msgListener) throws Exception;
 

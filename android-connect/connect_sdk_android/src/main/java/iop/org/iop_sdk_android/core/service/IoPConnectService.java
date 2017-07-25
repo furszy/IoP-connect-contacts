@@ -402,9 +402,13 @@ public class IoPConnectService extends Service implements ModuleRedtooth, Engine
     }
 
     @Override
-    public void disconnectProfile(String remoteHexPublicKey) {
-        ProfileInformation remoteProfile = getKnownProfile(remoteHexPublicKey);
-        core.getModule(EnabledServices.PROFILE_DATA.getName(), ProfilesModule.class).disconnectProfile(remoteProfile);
+    public void disconnectProfile(ProfileInformation remoteProfile, final ProfSerMsgListener<Boolean> readyListener) {
+        core.getModule(EnabledServices.PROFILE_DATA.getName(), ProfilesModule.class)
+                .disconnectProfile(
+                        profile,
+                        remoteProfile,
+                        readyListener
+                );
     }
 
     @Override
