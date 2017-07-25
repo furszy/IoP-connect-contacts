@@ -8,8 +8,11 @@ import android.util.Log;
 
 import org.fermat.redtooth.core.IoPConnect;
 import org.fermat.redtooth.core.services.pairing.PairingAppService;
+import org.fermat.redtooth.core.services.pairing.PairingMsg;
+import org.fermat.redtooth.core.services.pairing.PairingMsgTypes;
 import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.ProfileInformation;
+import org.fermat.redtooth.profile_server.engine.app_services.CallProfileAppService;
 import org.fermat.redtooth.profile_server.engine.app_services.PairingListener;
 import org.fermat.redtooth.profile_server.engine.futures.BaseMsgFuture;
 import org.fermat.redtooth.profile_server.engine.futures.ConnectionFuture;
@@ -154,7 +157,10 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             };
 
         });
-        ioPConnect.connectProfile(pubKey,pairingListener,null,msgListenerFuture);
+
+        connectService.setProfile(
+                ioPConnect.connectProfile(pubKey,pairingListener,null,msgListenerFuture)
+        );
     }
 
     public void onCheckInCompleted(String localProfilePubKey) {
@@ -220,17 +226,58 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
 
     @Override
     public void disconnectProfile(Profile localProfile, ProfileInformation remoteProfile, final ProfSerMsgListener<Boolean> readyListener) {
-        Log.i("GENERAL",localProfile.getHexPublicKey());
         String remoteHexPublicKey = remoteProfile.getHexPublicKey();
-        Log.i("GENERAL",EnabledServices.PROFILE_PAIRING.getName());
         PairingAppService pairingService = localProfile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
-        if (pairingService == null) { return; }
+        if (pairingService == null) {
+            readyListener.onMsgFail(0,0,"PairingService is null");
+            return;
+        }
         pairingService.disconectProfileService(remoteHexPublicKey);
-        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.CHAT.getName());
+        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
         try {
-            ioPConnect.callService(EnabledServices.CHAT.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, readyListener);
+            readyListener.onMessageReceive(1,true);
+            ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
+                @Override
+                public void onMessageReceive(int messageId, CallProfileAppService message) {
+                    ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
+                        @Override
+                        public void onMessageReceive(int messageId, Boolean message) {
+                            Log.i("GENERAL","EN EL ON MESSAGE RECEIVE");
+                        }
+
+                        @Override
+                        public void onMsgFail(int messageId, int statusValue, String details) {
+                            Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
+                        }
+
+                        @Override
+                        public String getMessageName() {
+                            return null;
+                        }
+                    };
+                    PairingMsg msg = new PairingMsg("pd","PairDisconect");
+                    try {
+                        message.sendMsg(msg, future);
+                    }catch (Exception e){
+                        Log.i("GENERAL","EN EL CATCH "+e.getMessage());
+                    }
+
+                }
+
+                @Override
+                public void onMsgFail(int messageId, int statusValue, String details) {
+                    Log.i("GENERAL","EN EL LOCAL READY ON MSG FAIL");
+                }
+
+                @Override
+                public String getMessageName() {
+                    return null;
+                }
+            };
+            ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
         }catch (Exception e){
-            throw e;
+            Log.i("GENERAL","Exception"+e.getMessage());
+            readyListener.onMsgFail(0,0,"In catch");
         }
     }
 

@@ -177,7 +177,6 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         flag.set(true);
         showLoading();
         MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
-        anRedtooth.disconnectProfile(profileInformation, readyListener);
         try {
             readyListener.setListener(new BaseMsgFuture.Listener<Boolean>() {
                 @Override
@@ -207,12 +206,15 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                         }
                     });
                 }
+
+
             });
 
         } catch (Exception e) {
             flag.set(false);
             e.printStackTrace();
         }
+        anRedtooth.disconnectProfile(profileInformation, readyListener);
     }
 
     private void loadProfileData() {
@@ -327,7 +329,6 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                                             startActivity(intent);
                                         }
                                     });
-
                                 }
 
                                 @Override

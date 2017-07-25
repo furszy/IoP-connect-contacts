@@ -102,8 +102,9 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
     @Override
     public void disconnectProfile(String localProfilePubKey, String remoteHexPublicKey) {
         SQLiteDatabase db = this.getWritableDatabase();
-        int rows = db.delete(DATABASE_NAME, CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+"=? and "+CONTACTS_COLUMN_PUB_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
-        Log.i("GENERAL","Rows delete in disconnectProfile" + rows);
+        int rows = db.delete(CONTACTS_TABLE_NAME, CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+"=? and "+CONTACTS_COLUMN_PUB_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
+        Log.i("GENERAL","Rows delete in disconnectProfile " + rows);
+        db.close();
     }
 
     public long insertContact (String localProfileOwnerOfThisContact, ProfileInformation profile) {

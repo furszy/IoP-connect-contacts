@@ -157,6 +157,9 @@ public class PairingAppService extends AppService {
                                     }
                                 }
                                 break;
+                            case PAIR_DISCONNECT:
+                                logger.info("PAIR_DISCONNECT");
+                                break;
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
