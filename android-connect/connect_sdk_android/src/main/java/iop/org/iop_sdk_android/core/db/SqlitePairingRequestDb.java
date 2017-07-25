@@ -186,8 +186,9 @@ public class SqlitePairingRequestDb extends AbstractSqliteDb<PairingRequest> imp
     @Override
     public void disconnectParingProfile(String localProfilePubKey, String remoteHexPublicKey) {
         SQLiteDatabase db = this.getWritableDatabase();
-        int rows = db.delete(DATABASE_NAME, PAIRING_COLUMN_SENDER_KEY+"=? and "+PAIRING_COLUMN_REMOTE_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
-        Log.i("GENERAL","Rows delete in disconnectParingProfile" + rows);
+        int rows = db.delete(PAIRING_TABLE_NAME, PAIRING_COLUMN_SENDER_KEY+"=? and "+PAIRING_COLUMN_REMOTE_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
+        Log.i("GENERAL","Rows delete in disconnectParingProfile " + rows);
+        db.close();
     }
 
     @Override

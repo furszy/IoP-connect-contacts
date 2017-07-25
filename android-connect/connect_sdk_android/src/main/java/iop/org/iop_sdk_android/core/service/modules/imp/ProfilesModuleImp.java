@@ -232,11 +232,13 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             return;
         }
         pairingService.disconectProfileService(remoteHexPublicKey);
-        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.CHAT.getName());
+        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
         try {
-            ioPConnect.callService(EnabledServices.CHAT.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, readyListener);
+            //ioPConnect.callService(EnabledServices.CHAT.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, readyListener);
+            readyListener.onMessageReceive(1,true);
         }catch (Exception e){
-            throw e;
+            Log.i("GENERAL","Exception"+e.getMessage());
+            readyListener.onMsgFail(0,0,"PairingService is null");
         }
     }
 
