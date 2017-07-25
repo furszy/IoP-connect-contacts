@@ -224,7 +224,10 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
         String remoteHexPublicKey = remoteProfile.getHexPublicKey();
         Log.i("GENERAL",EnabledServices.PROFILE_PAIRING.getName());
         PairingAppService pairingService = localProfile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
-        if (pairingService == null) { return; }
+        if (pairingService == null) {
+            readyListener.onMsgFail(0,0,"PairingService is null");
+            return;
+        }
         pairingService.disconectProfileService(remoteHexPublicKey);
         final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.CHAT.getName());
         try {
