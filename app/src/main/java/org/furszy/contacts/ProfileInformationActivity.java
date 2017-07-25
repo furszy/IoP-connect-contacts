@@ -141,7 +141,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         btn_disconnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                tappedBtnDisconnect();
             }
         });
 
@@ -170,6 +170,49 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
             showLoading();
         }else
             hideLoading();*/
+    }
+
+    private void tappedBtnDisconnect() {
+        if (flag.compareAndSet(true,true)){ return; }
+        flag.set(true);
+        showLoading();
+        MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
+        anRedtooth.disconnectProfile(profileInformation, readyListener);
+        try {
+            readyListener.setListener(new BaseMsgFuture.Listener<Boolean>() {
+                @Override
+                public void onAction(int messageId, Boolean object) {
+                    Log.e(TAG, "Success disconnecting user");
+                    flag.set(false);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hideLoading();
+                            Toast.makeText(ProfileInformationActivity.this, "User has been disconnected", Toast.LENGTH_LONG).show();
+                            onBackPressed();
+                        }
+                    });
+
+                }
+
+                @Override
+                public void onFail(int messageId, int status, String statusDetail) {
+                    Log.e(TAG, "fail chat request: " + statusDetail + ", id: " + messageId);
+                    flag.set(false);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            hideLoading();
+                            Toast.makeText(ProfileInformationActivity.this, "Fail disconnecting", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            });
+
+        } catch (Exception e) {
+            flag.set(false);
+            e.printStackTrace();
+        }
     }
 
     private void loadProfileData() {

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import org.fermat.redtooth.core.IoPConnect;
 import org.fermat.redtooth.core.services.pairing.PairingAppService;
@@ -218,16 +219,16 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     }
 
     @Override
-    public void disconnectProfile(ProfileInformation remoteProfile) {
-        Profile profile = connectService.getProfile();
+    public void disconnectProfile(Profile localProfile, ProfileInformation remoteProfile, final ProfSerMsgListener<Boolean> readyListener) {
+        Log.i("GENERAL",localProfile.getHexPublicKey());
         String remoteHexPublicKey = remoteProfile.getHexPublicKey();
-        PairingAppService pairingService = profile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
+        Log.i("GENERAL",EnabledServices.PROFILE_PAIRING.getName());
+        PairingAppService pairingService = localProfile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
+        if (pairingService == null) { return; }
         pairingService.disconectProfileService(remoteHexPublicKey);
-
-        MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
-
+        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.CHAT.getName());
         try {
-            ioPConnect.callService(EnabledServices.CHAT.getName(), profile, remoteProfile, false, readyListener);
+            ioPConnect.callService(EnabledServices.CHAT.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, readyListener);
         }catch (Exception e){
             throw e;
         }
