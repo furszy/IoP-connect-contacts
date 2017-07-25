@@ -242,12 +242,12 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
                     ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
                         @Override
                         public void onMessageReceive(int messageId, Boolean message) {
-
+                            Log.i("GENERAL","EN EL ON MESSAGE RECEIVE");
                         }
 
                         @Override
                         public void onMsgFail(int messageId, int statusValue, String details) {
-
+                            Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
                         }
 
                         @Override
@@ -255,18 +255,18 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
                             return null;
                         }
                     };
-                    PairingMsg msg = new PairingMsg("","qweqw");
+                    PairingMsg msg = new PairingMsg("pd","PairDisconect");
                     try {
                         message.sendMsg(msg, future);
                     }catch (Exception e){
-
+                        Log.i("GENERAL","EN EL CATCH "+e.getMessage());
                     }
 
                 }
 
                 @Override
                 public void onMsgFail(int messageId, int statusValue, String details) {
-
+                    Log.i("GENERAL","EN EL LOCAL READY ON MSG FAIL");
                 }
 
                 @Override
@@ -274,7 +274,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
                     return null;
                 }
             };
-            //ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
+            ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
         }catch (Exception e){
             Log.i("GENERAL","Exception"+e.getMessage());
             readyListener.onMsgFail(0,0,"In catch");
