@@ -12,6 +12,7 @@ import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.ProfileInformation;
 import org.fermat.redtooth.profile_server.imp.ProfileInformationImp;
+import org.fermat.redtooth.profile_server.imp.ProfileInformationImp.PairStatus;
 import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -360,7 +361,8 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME
                 +" where "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '" +localProfileOwnerOfContacts+"' " +
-                "AND "+CONTACTS_COLUMN_PAIR+"='"+ ProfileInformationImp.PairStatus.PAIRED.name()+"'", null );
+                "AND ("+CONTACTS_COLUMN_PAIR+"='"+ ProfileInformationImp.PairStatus.PAIRED.name()+
+                "' OR "+CONTACTS_COLUMN_PAIR+"='"+ PairStatus.DISCONNECTED.name()+"')", null );
         if(res.moveToFirst()) {
             do {
                 list.add(buildFrom(res).profileInformation);

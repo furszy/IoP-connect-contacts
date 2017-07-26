@@ -10,6 +10,7 @@
         android:id="@+id/user_image"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingBottom="10dp"
         android:layout_marginBottom="20dp"
         android:layout_marginTop="50dp"
         android:gravity="center"
@@ -50,6 +51,17 @@
             style="@style/ButtomProfile"
             android:layout_width="220dp"
             android:text="@string/btn_disconnect" />
+
+        <TextView
+            android:id="@+id/disconnected_message"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/disconnected_message"
+            android:gravity="center"
+            android:textColor="@color/mainText"
+            android:textSize="15sp"/>
 
 
     </LinearLayout>

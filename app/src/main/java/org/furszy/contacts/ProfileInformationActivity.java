@@ -1,8 +1,10 @@
 package org.furszy.contacts;
 
+import android.app.ActionBar;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -18,6 +20,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.fermat.redtooth.profile_server.imp.ProfileInformationImp;
 import org.furszy.contacts.App;
 import org.furszy.contacts.R;
 import org.furszy.contacts.ui.chat.ChatActivity;
@@ -43,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_DISCONNECTED;
 import static org.furszy.contacts.ui.chat.WaitingChatActivity.REMOTE_PROFILE_PUB_KEY;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_PROFILE_UPDATED_CONSTANT;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
@@ -67,7 +71,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
     private View root;
     private CircleImageView imgProfile;
-    private TextView txt_name;
+    private TextView txt_name, disconnected_message;
     private Button btn_disconnect;
     private ProgressBar progress_bar;
 
@@ -78,6 +82,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
     private boolean isMyProfile;
     private boolean searchForProfile = false;
+    private static final int OPTIONS_DELETE = 1;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -88,6 +93,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                     profileInformation = anRedtooth.getMyProfile();
                     loadProfileData();
                 }
+            } else if (action.equals(ACTION_ON_PAIR_DISCONNECTED)) {
+                logger.info("EN EL RECEIVER DE PROFILEINFORMATION");
+                loadProfileData();
             }
         }
     };
@@ -96,6 +104,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     public boolean onCreateOptionsMenu(Menu menu) {
         if (getIntent()!=null && getIntent().hasExtra(IS_MY_PROFILE)) {
             getMenuInflater().inflate(R.menu.my_profile_menu, menu);
+        } else {
+            MenuItem menuItem = menu.add(0,OPTIONS_DELETE,0,R.string.delete_contact);
+            return super.onCreateOptionsMenu(menu);
         }
         return true;
     }
@@ -105,6 +116,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
             case R.id.editProfile:
                 Intent myIntent = new Intent(this,ProfileActivity.class);
                 startActivity(myIntent);
+                return true;
+            case OPTIONS_DELETE:
+                tappedBtnDisconnect();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -117,6 +131,8 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#2998ff")));
+
+        localBroadcastManager.registerReceiver(receiver,new IntentFilter(ACTION_ON_PAIR_DISCONNECTED));
 
         module = ((App)getApplication()).getAnRedtooth().getRedtooth();
 
@@ -134,24 +150,28 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         imgProfile = (CircleImageView) root.findViewById(R.id.profile_image);
         txt_name = (TextView) root.findViewById(R.id.txt_name);
         btn_disconnect = (Button) root.findViewById(R.id.btn_disconnect);
+        disconnected_message = (TextView) root.findViewById(R.id.disconnected_message);
+        disconnected_message.setVisibility(View.GONE);
         progress_bar = (ProgressBar) root.findViewById(R.id.progress_bar);
         txt_chat = (TextView) root.findViewById(R.id.txt_chat);
         txt_chat.setOnClickListener(this);
-
+        btn_disconnect.setEnabled(false);
         btn_disconnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                tappedBtnDisconnect();
+                tappedBtnReconnect();
             }
         });
 
         Bundle extras = getIntent().getExtras();
         if (extras!=null){
             if (extras.containsKey(INTENT_EXTRA_PROF_KEY)) {
+                logger.info("in case when INTENT_EXTRA_PROF_KEY");
                 byte[] pubKey = extras.getByteArray(INTENT_EXTRA_PROF_KEY);
                 profileInformation = module.getKnownProfile(CryptoBytes.toHexString(pubKey));
                 // and schedule to try to update this profile information..
                 searchForProfile = true;
+
             }else if (extras.containsKey(IS_MY_PROFILE)){
                 isMyProfile = true;
                 profileInformation = module.getMyProfile();
@@ -175,50 +195,71 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     private void tappedBtnDisconnect() {
         if (flag.compareAndSet(true,true)){ return; }
         flag.set(true);
-        showLoading();
-        MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
-        try {
-            readyListener.setListener(new BaseMsgFuture.Listener<Boolean>() {
-                @Override
-                public void onAction(int messageId, Boolean object) {
-                    Log.e(TAG, "Success disconnecting user");
-                    flag.set(false);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            hideLoading();
-                            Toast.makeText(ProfileInformationActivity.this, "User has been disconnected", Toast.LENGTH_LONG).show();
-                            onBackPressed();
-                        }
-                    });
+        if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
 
-                }
-
-                @Override
-                public void onFail(int messageId, int status, String statusDetail) {
-                    Log.e(TAG, "fail chat request: " + statusDetail + ", id: " + messageId);
-                    flag.set(false);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            hideLoading();
-                            Toast.makeText(ProfileInformationActivity.this, "Fail disconnecting", Toast.LENGTH_LONG).show();
-                        }
-                    });
-                }
-
-
-            });
-
-        } catch (Exception e) {
             flag.set(false);
-            e.printStackTrace();
+            return;
         }
-        anRedtooth.disconnectProfile(profileInformation, readyListener);
+        showLoading();
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
+                try {
+                    readyListener.setListener(new BaseMsgFuture.Listener<Boolean>() {
+                        @Override
+                        public void onAction(int messageId, Boolean object) {
+                            Log.e(TAG, "Success disconnecting user");
+                            flag.set(false);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    hideLoading();
+                                    Toast.makeText(ProfileInformationActivity.this, "User has been disconnected", Toast.LENGTH_LONG).show();
+                                    onBackPressed();
+                                }
+                            });
+
+                        }
+
+                        @Override
+                        public void onFail(int messageId, int status, String statusDetail) {
+                            Log.e(TAG, "fail chat request: " + statusDetail + ", id: " + messageId);
+                            flag.set(false);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    hideLoading();
+                                    Toast.makeText(ProfileInformationActivity.this, "Fail disconnecting", Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        }
+
+
+                    });
+
+                } catch (Exception e) {
+                    flag.set(false);
+                    e.printStackTrace();
+                }
+                anRedtooth.disconnectProfile(profileInformation, readyListener);
+            }
+        });
+    }
+
+    private void tappedBtnReconnect(){
+        Log.i("GENERAL","tappedBTNRECONNECT");
     }
 
     private void loadProfileData() {
         if (profileInformation!=null) {
+            if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
+                btn_disconnect.setEnabled(true);
+                btn_disconnect.setText("Send a request");
+                btn_disconnect.setBackgroundColor(getResources().getColor(R.color.bgBlue,null));
+                btn_disconnect.setTextColor(getResources().getColor(R.color.white,null));
+                disconnected_message.setVisibility(View.VISIBLE);
+            }
             txt_name.setText(profileInformation.getName());
             if (profileInformation.getImg() != null && profileInformation.getImg().length > 1) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(profileInformation.getImg(), 0, profileInformation.getImg().length);
@@ -309,6 +350,10 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         int id = v.getId();
         if (id==R.id.txt_chat){
             if (isMyProfile) { return; }
+            if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
+                Toast.makeText(v.getContext(),"You need connect with "+profileInformation.getName()+" in order to send messages",Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (flag.compareAndSet(false,true)) {
                 Toast.makeText(v.getContext(),"Sending chat request..",Toast.LENGTH_SHORT).show();
                 executor.submit(new Runnable() {
