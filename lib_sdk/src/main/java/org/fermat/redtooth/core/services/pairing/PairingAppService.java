@@ -157,6 +157,20 @@ public class PairingAppService extends AppService {
                                     }
                                 }
                                 break;
+                            case PAIR_DISCONNECT:
+                                logger.info("PAIR_DISCONNECT");
+                                boolean wasUpdated = pairingRequestsManager.updateStatus(
+                                        profileServiceOwner.getHexPublicKey(),
+                                        callProfileAppService.getRemotePubKey(),
+                                        PairingMsgTypes.PAIR_DISCONNECT,
+                                        ProfileInformationImp.PairStatus.DISCONNECTED);
+                                logger.info("UDATESTATUS IN PAIR_DISCONNECT {}",wasUpdated);
+                                if (pairingListener!=null){
+                                    pairingListener.onPairDisconnectReceived(callProfileAppService.getRemotePubKey());
+                                }else {
+                                    logger.info("pairListener null, please add it if you want to receive pairs");
+                                }
+                                break;
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -164,6 +178,12 @@ public class PairingAppService extends AppService {
                 }
             });
         }
+    }
+
+    public void disconectProfileService(String remoteHexPublicKey){
+        String localHexPublicKey = profileServiceOwner.getHexPublicKey();
+        profilesManager.disconnectProfile(localHexPublicKey, remoteHexPublicKey);
+        pairingRequestsManager.disconnectParingProfile(localHexPublicKey, remoteHexPublicKey);
     }
 
     public PairingListener getPairingListener() {

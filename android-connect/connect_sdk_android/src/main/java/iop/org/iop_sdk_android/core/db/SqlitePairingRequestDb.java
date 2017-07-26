@@ -4,6 +4,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.nfc.Tag;
+import android.util.Log;
 
 import org.fermat.redtooth.core.services.pairing.PairingMsgTypes;
 import org.fermat.redtooth.profile_server.imp.ProfileInformationImp;
@@ -178,6 +180,15 @@ public class SqlitePairingRequestDb extends AbstractSqliteDb<PairingRequest> imp
                 new String[]{remotePubKey,senderPubKey}
         )==1;
 
+    }
+
+
+    @Override
+    public void disconnectParingProfile(String localProfilePubKey, String remoteHexPublicKey) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        int rows = db.delete(PAIRING_TABLE_NAME, PAIRING_COLUMN_SENDER_KEY+"=? and "+PAIRING_COLUMN_REMOTE_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
+        Log.i("GENERAL","Rows delete in disconnectParingProfile " + rows);
+        db.close();
     }
 
     @Override

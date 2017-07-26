@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
@@ -98,7 +99,15 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         onCreate(db);
     }
 
-    public long insertContact (String localProfileOwnerOfThisContact,ProfileInformation profile) {
+    @Override
+    public void disconnectProfile(String localProfilePubKey, String remoteHexPublicKey) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        int rows = db.delete(CONTACTS_TABLE_NAME, CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+"=? and "+CONTACTS_COLUMN_PUB_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
+        Log.i("GENERAL","Rows delete in disconnectProfile " + rows);
+        db.close();
+    }
+
+    public long insertContact (String localProfileOwnerOfThisContact, ProfileInformation profile) {
         SQLiteDatabase db = this.getWritableDatabase();
         long id = db.insert(CONTACTS_TABLE_NAME, null, buildContent(profile,localProfileOwnerOfThisContact));
         return id;
