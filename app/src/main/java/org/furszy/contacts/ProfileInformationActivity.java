@@ -67,7 +67,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
     private View root;
     private CircleImageView imgProfile;
-    private TextView txt_name;
+    private TextView txt_name, disconnected_message;
     private Button btn_disconnect;
     private ProgressBar progress_bar;
 
@@ -134,6 +134,8 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         imgProfile = (CircleImageView) root.findViewById(R.id.profile_image);
         txt_name = (TextView) root.findViewById(R.id.txt_name);
         btn_disconnect = (Button) root.findViewById(R.id.btn_disconnect);
+        disconnected_message = (TextView) root.findViewById(R.id.disconnected_message);
+        disconnected_message.setVisibility(View.GONE);
         progress_bar = (ProgressBar) root.findViewById(R.id.progress_bar);
         txt_chat = (TextView) root.findViewById(R.id.txt_chat);
         txt_chat.setOnClickListener(this);
