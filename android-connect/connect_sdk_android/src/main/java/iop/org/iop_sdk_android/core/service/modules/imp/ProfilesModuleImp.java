@@ -45,6 +45,7 @@ import iop.org.iop_sdk_android.core.utils.ImageUtils;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_CHECK_IN_FAIL;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_CONNECTED;
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_DISCONNECTED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_RESPONSE_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_NAME;
@@ -89,6 +90,13 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             Intent intent = new Intent(ACTION_ON_RESPONSE_PAIR_RECEIVED);
             intent.putExtra(INTENT_EXTRA_PROF_KEY,requesteePubKey);
             intent.putExtra(INTENT_RESPONSE_DETAIL,responseDetail);
+            localBroadcastManager.sendBroadcast(intent);
+        }
+
+        @Override
+        public void onPairDisconnectReceived(String remotePubKey) {
+            Intent intent = new Intent(ACTION_ON_PROFILE_DISCONNECTED);
+            intent.putExtra(INTENT_EXTRA_PROF_KEY,remotePubKey);
             localBroadcastManager.sendBroadcast(intent);
         }
     };
@@ -238,7 +246,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
         pairingService.disconectProfileService(remoteHexPublicKey);
         readyListener.onMessageReceive(1,true);
         if (pairingService.hasOpenCall(remoteHexPublicKey)) {
-            Log.i("GENERAL", "disconnectProfile EXIST CALL");
+            logger.info("disconnectProfile EXIST CALL");
             CallProfileAppService call = pairingService.getOpenCall(remoteHexPublicKey);
             call.dispose();
         }
@@ -246,48 +254,37 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     }
 
     private void prepareCallServiceForProfilePairingDisconnect(final Profile localProfile, final ProfileInformation remoteProfile) {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future future = executor.submit(new Callable() {
-            public Object call() {
-                try {
-                    final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
-                    ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
-                        @Override
-                        public void onMessageReceive(int messageId, CallProfileAppService message) {
-                            doCallForProfilePairingDisconnect(message);
-                        }
+        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
+        ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
+            @Override
+            public void onMessageReceive(int messageId, CallProfileAppService message) {
+                doCallForProfilePairingDisconnect(message);
+            }
 
-                        @Override
-                        public void onMsgFail(int messageId, int statusValue, String details) {
-                            Log.i("GENERAL","EN EL LOCAL READY ON MSG FAIL");
-                        }
+            @Override
+            public void onMsgFail(int messageId, int statusValue, String details) {
+                logger.info("LOCAL READY LISTENER ON MSG FAIL");
+            }
 
-                        @Override
-                        public String getMessageName() {
-                            return null;
-                        }
-                    };
-                    ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
-                } catch (Exception e) {
-                    Log.i("GENERAL", "doCallServiceForProfilePairing Exception");
-                    e.printStackTrace();
-                }
+            @Override
+            public String getMessageName() {
                 return null;
             }
-        });
+        };
+        ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
     }
 
     private void doCallForProfilePairingDisconnect(final CallProfileAppService call){
         ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
             @Override
             public void onMessageReceive(int messageId, Boolean message) {
-                Log.i("GENERAL","EN EL FUTURE ON MESSAGE RECEIVE");
+                logger.info("FUTURE LISTENER ON MESSAGE RECEIVE");
                 call.dispose();
             }
 
             @Override
             public void onMsgFail(int messageId, int statusValue, String details) {
-                Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
+                logger.info("FUTURE LISTENER ON MESSAGE FAIL");
                 call.dispose();
             }
 
@@ -299,11 +296,11 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
 
         try {
             DisconnectMsg msg = new DisconnectMsg();
-            Log.i("GENERAL","doCallForProfilePairingDisconnect SENDING MESSAGE TYPE: "+PairingMsgTypes.PAIR_DISCONNECT.getType());
+            logger.info("doCallForProfilePairingDisconnect SENDING MESSAGE TYPE: {}",PairingMsgTypes.PAIR_DISCONNECT.getType());
             call.sendMsg(msg, future);
         }catch (Exception e){
             call.dispose();
-            Log.i("GENERAL","doCallForProfilePairingDisconnect EN EL CATCH "+e.getMessage());
+            logger.info("doCallForProfilePairingDisconnect EN EL CATCH: {}",e.getMessage());
         }
     }
 
