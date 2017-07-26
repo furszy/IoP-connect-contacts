@@ -1,5 +1,7 @@
 package iop.org.iop_sdk_android.core.service.modules.imp;
 
+import android.util.Log;
+
 import org.fermat.redtooth.core.IoPConnect;
 import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
@@ -48,6 +50,7 @@ public class PairingModuleImp extends AbstractModule implements PairingModule{
         ProfileInformation profileInformationDb = null;
         String remotePubKeyStr = CryptoBytes.toHexString(remotePubKey);
         if((profileInformationDb = ioPConnectService.getProfilesDb().getProfile(localProfile.getHexPublicKey(),remotePubKeyStr))!=null){
+            Log.i("GENERAL", "PARING REQUEST EXIST ALREADY KNOWN PROFILE "+profileInformationDb.getName());
             if(profileInformationDb.getPairStatus() != null)
                 throw new IllegalArgumentException("Already known profile");
         }

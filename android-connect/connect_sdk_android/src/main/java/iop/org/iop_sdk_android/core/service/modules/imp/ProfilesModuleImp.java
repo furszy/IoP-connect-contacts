@@ -4,16 +4,26 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import org.fermat.redtooth.core.IoPConnect;
+import org.fermat.redtooth.core.services.pairing.DisconnectMsg;
+import org.fermat.redtooth.core.services.pairing.PairingAppService;
+import org.fermat.redtooth.core.services.pairing.PairingMsg;
+import org.fermat.redtooth.core.services.pairing.PairingMsgTypes;
 import org.fermat.redtooth.global.Version;
+import org.fermat.redtooth.profile_server.ProfileInformation;
+import org.fermat.redtooth.profile_server.engine.app_services.CallProfileAppService;
 import org.fermat.redtooth.profile_server.engine.app_services.PairingListener;
 import org.fermat.redtooth.profile_server.engine.futures.BaseMsgFuture;
 import org.fermat.redtooth.profile_server.engine.futures.ConnectionFuture;
+import org.fermat.redtooth.profile_server.engine.futures.MsgListenerFuture;
 import org.fermat.redtooth.profile_server.engine.listeners.ProfSerMsgListener;
 import org.fermat.redtooth.profile_server.model.KeyEd25519;
 import org.fermat.redtooth.profile_server.model.Profile;
+import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.fermat.redtooth.services.EnabledServices;
+import org.fermat.redtooth.services.chat.RequestChatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,10 +40,12 @@ import iop.org.iop_sdk_android.core.IntentBroadcastConstants;
 import iop.org.iop_sdk_android.core.service.IoPConnectService;
 import iop.org.iop_sdk_android.core.service.modules.AbstractModule;
 import iop.org.iop_sdk_android.core.service.modules.interfaces.ProfilesModule;
+import iop.org.iop_sdk_android.core.utils.EmptyListener;
 import iop.org.iop_sdk_android.core.utils.ImageUtils;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_CHECK_IN_FAIL;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_CONNECTED;
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_DISCONNECTED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_RESPONSE_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_NAME;
@@ -78,6 +90,13 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             Intent intent = new Intent(ACTION_ON_RESPONSE_PAIR_RECEIVED);
             intent.putExtra(INTENT_EXTRA_PROF_KEY,requesteePubKey);
             intent.putExtra(INTENT_RESPONSE_DETAIL,responseDetail);
+            localBroadcastManager.sendBroadcast(intent);
+        }
+
+        @Override
+        public void onPairDisconnectReceived(String remotePubKey) {
+            Intent intent = new Intent(ACTION_ON_PROFILE_DISCONNECTED);
+            intent.putExtra(INTENT_EXTRA_PROF_KEY,remotePubKey);
             localBroadcastManager.sendBroadcast(intent);
         }
     };
@@ -214,6 +233,75 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     private void broadcastUpdateProfile() {
         Intent intent = new Intent(IntentBroadcastConstants.ACTION_PROFILE_UPDATED_CONSTANT);
         localBroadcastManager.sendBroadcast(intent);
+    }
+
+    @Override
+    public void disconnectProfile(Profile localProfile, ProfileInformation remoteProfile, final ProfSerMsgListener<Boolean> readyListener) {
+        String remoteHexPublicKey = remoteProfile.getHexPublicKey();
+        PairingAppService pairingService = localProfile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
+        if (pairingService == null) {
+            readyListener.onMsgFail(0,0,"PairingService is null");
+            return;
+        }
+        pairingService.disconectProfileService(remoteHexPublicKey);
+        readyListener.onMessageReceive(1,true);
+        if (pairingService.hasOpenCall(remoteHexPublicKey)) {
+            logger.info("disconnectProfile EXIST CALL");
+            CallProfileAppService call = pairingService.getOpenCall(remoteHexPublicKey);
+            call.dispose();
+        }
+        prepareCallServiceForProfilePairingDisconnect(localProfile,remoteProfile);
+    }
+
+    private void prepareCallServiceForProfilePairingDisconnect(final Profile localProfile, final ProfileInformation remoteProfile) {
+        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
+        ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
+            @Override
+            public void onMessageReceive(int messageId, CallProfileAppService message) {
+                doCallForProfilePairingDisconnect(message);
+            }
+
+            @Override
+            public void onMsgFail(int messageId, int statusValue, String details) {
+                logger.info("LOCAL READY LISTENER ON MSG FAIL");
+            }
+
+            @Override
+            public String getMessageName() {
+                return null;
+            }
+        };
+        ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
+    }
+
+    private void doCallForProfilePairingDisconnect(final CallProfileAppService call){
+        ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
+            @Override
+            public void onMessageReceive(int messageId, Boolean message) {
+                logger.info("FUTURE LISTENER ON MESSAGE RECEIVE");
+                call.dispose();
+            }
+
+            @Override
+            public void onMsgFail(int messageId, int statusValue, String details) {
+                logger.info("FUTURE LISTENER ON MESSAGE FAIL");
+                call.dispose();
+            }
+
+            @Override
+            public String getMessageName() {
+                return null;
+            }
+        };
+
+        try {
+            DisconnectMsg msg = new DisconnectMsg();
+            logger.info("doCallForProfilePairingDisconnect SENDING MESSAGE TYPE: {}",PairingMsgTypes.PAIR_DISCONNECT.getType());
+            call.sendMsg(msg, future);
+        }catch (Exception e){
+            call.dispose();
+            logger.info("doCallForProfilePairingDisconnect EN EL CATCH: {}",e.getMessage());
+        }
     }
 
     @Override

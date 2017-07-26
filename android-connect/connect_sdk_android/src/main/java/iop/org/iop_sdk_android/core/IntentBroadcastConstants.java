@@ -1,5 +1,7 @@
 package iop.org.iop_sdk_android.core;
 
+import org.fermat.redtooth.governance.utils.StreamsUtils;
+
 /**
  * Created by furszy on 7/7/17.
  */
@@ -13,6 +15,7 @@ public class IntentBroadcastConstants {
     public static final String ACTION_ON_CHECK_IN_FAIL = "on_checkin_fail";
     public static final String ACTION_ON_PAIR_RECEIVED = "on_pair_received";
     public static final String ACTION_ON_RESPONSE_PAIR_RECEIVED = "on_response_pair_received";
+    public static final String ACTION_ON_DISCONNECTED = "on_disconnected";
 
     public static final String ACTION_IOP_SERVICE_CONNECTED = "iop_service_connected";
 

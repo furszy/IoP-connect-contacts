@@ -23,7 +23,8 @@ public class ProfileInformationImp implements Serializable,ProfileInformation {
         NOT_PAIRED,
         BLOCKED,
         WAITING_FOR_RESPONSE,
-        WAITING_FOR_MY_RESPONSE;
+        WAITING_FOR_MY_RESPONSE,
+        DISCONNECTED
     }
 
     private Version version;
