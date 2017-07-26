@@ -299,7 +299,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
 
         try {
             DisconnectMsg msg = new DisconnectMsg();
-            Log.i("GENERAL","doCallForProfilePairingDisconnect SENDING MESSAGE");
+            Log.i("GENERAL","doCallForProfilePairingDisconnect SENDING MESSAGE TYPE: "+PairingMsgTypes.PAIR_DISCONNECT.getType());
             call.sendMsg(msg, future);
         }catch (Exception e){
             call.dispose();
