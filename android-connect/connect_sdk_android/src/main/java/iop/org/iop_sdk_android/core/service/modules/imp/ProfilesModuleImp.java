@@ -7,6 +7,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import org.fermat.redtooth.core.IoPConnect;
+import org.fermat.redtooth.core.services.pairing.DisconnectMsg;
 import org.fermat.redtooth.core.services.pairing.PairingAppService;
 import org.fermat.redtooth.core.services.pairing.PairingMsg;
 import org.fermat.redtooth.core.services.pairing.PairingMsgTypes;
@@ -243,8 +244,6 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             call.dispose();
         }
         prepareCallServiceForProfilePairingDisconnect(localProfile,remoteProfile);
-
-
     }
 
     private void prepareCallServiceForProfilePairingDisconnect(final Profile localProfile, final ProfileInformation remoteProfile) {
@@ -279,16 +278,18 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
         });
     }
 
-    private void doCallForProfilePairingDisconnect(CallProfileAppService call){
+    private void doCallForProfilePairingDisconnect(final CallProfileAppService call){
         ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
             @Override
             public void onMessageReceive(int messageId, Boolean message) {
                 Log.i("GENERAL","EN EL FUTURE ON MESSAGE RECEIVE");
+                call.dispose();
             }
 
             @Override
             public void onMsgFail(int messageId, int statusValue, String details) {
                 Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
+                call.dispose();
             }
 
             @Override
@@ -296,11 +297,13 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
                 return null;
             }
         };
-        PairingMsg msg = new PairingMsg();
+
         try {
+            DisconnectMsg msg = new DisconnectMsg();
             Log.i("GENERAL","doCallForProfilePairingDisconnect SENDING MESSAGE");
             call.sendMsg(msg, future);
         }catch (Exception e){
+            call.dispose();
             Log.i("GENERAL","doCallForProfilePairingDisconnect EN EL CATCH "+e.getMessage());
         }
     }
