@@ -122,7 +122,6 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                                 Snackbar.make(v, R.string.pairing_fail, Snackbar.LENGTH_LONG).show();
                                                 progressBar.setVisibility(View.INVISIBLE);
                                                 enableSendBtn();
-                                                //onBackPressed();
                                             }
                                         });
                                     }
@@ -177,7 +176,7 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                     //Toast.makeText(this,address,Toast.LENGTH_LONG).show();
                     edit_uri.setText(address);
                 }catch (Exception e){
-                    Toast.makeText(this,"Bad profile URI",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,R.string.uri_fail,Toast.LENGTH_LONG).show();
                 }
             }
         }
