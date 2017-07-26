@@ -573,6 +573,7 @@ public class IoPConnect implements ConnectionListener {
                             public void onFail(int messageId, int status, String statusDetail) {
                                 logger.info("pairing msg fail, remote: " + call.getRemotePubKey());
                                 listener.onMsgFail(messageId, status, statusDetail);
+                                call.dispose();
                             }
                         });
                         PairingMsg pairingMsg = new PairingMsg(pairingRequest.getSenderName(),pairingRequest.getSenderPsHost());
@@ -670,7 +671,9 @@ public class IoPConnect implements ConnectionListener {
                 @Override
                 public void onAction(int messageId, CallProfileAppService call) {
                     try {
+                        logger.info("GENERAL: PAIRING ACCEPT");
                         call.sendMsg(PairingMsgTypes.PAIR_ACCEPT.getType(), future);
+                        call.dispose();
                     } catch (Exception e) {
                         logger.error("call sendMsg error",e);
                         future.onMsgFail(messageId,400,e.getMessage());

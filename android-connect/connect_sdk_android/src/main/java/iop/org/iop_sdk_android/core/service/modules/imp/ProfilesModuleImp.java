@@ -22,6 +22,7 @@ import org.fermat.redtooth.profile_server.model.KeyEd25519;
 import org.fermat.redtooth.profile_server.model.Profile;
 import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.fermat.redtooth.services.EnabledServices;
+import org.fermat.redtooth.services.chat.RequestChatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +39,7 @@ import iop.org.iop_sdk_android.core.IntentBroadcastConstants;
 import iop.org.iop_sdk_android.core.service.IoPConnectService;
 import iop.org.iop_sdk_android.core.service.modules.AbstractModule;
 import iop.org.iop_sdk_android.core.service.modules.interfaces.ProfilesModule;
+import iop.org.iop_sdk_android.core.utils.EmptyListener;
 import iop.org.iop_sdk_android.core.utils.ImageUtils;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_CHECK_IN_FAIL;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_RECEIVED;
@@ -233,21 +235,32 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             return;
         }
         pairingService.disconectProfileService(remoteHexPublicKey);
-        final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
-        try {
-            readyListener.onMessageReceive(1,true);
-            ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
-                @Override
-                public void onMessageReceive(int messageId, CallProfileAppService message) {
-                    ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
+        readyListener.onMessageReceive(1,true);
+        if (pairingService.hasOpenCall(remoteHexPublicKey)) {
+            Log.i("GENERAL", "disconnectProfile EXIST CALL");
+            CallProfileAppService call = pairingService.getOpenCall(remoteHexPublicKey);
+            call.dispose();
+        }
+        prepareCallServiceForProfilePairingDisconnect(localProfile,remoteProfile);
+
+
+    }
+
+    private void prepareCallServiceForProfilePairingDisconnect(final Profile localProfile, final ProfileInformation remoteProfile) {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future future = executor.submit(new Callable() {
+            public Object call() {
+                try {
+                    final boolean tryUpdateRemoteServices = !remoteProfile.hasService(EnabledServices.PROFILE_PAIRING.getName());
+                    ProfSerMsgListener<CallProfileAppService> localReadyListener = new ProfSerMsgListener<CallProfileAppService>() {
                         @Override
-                        public void onMessageReceive(int messageId, Boolean message) {
-                            Log.i("GENERAL","EN EL ON MESSAGE RECEIVE");
+                        public void onMessageReceive(int messageId, CallProfileAppService message) {
+                            doCallForProfilePairingDisconnect(message);
                         }
 
                         @Override
                         public void onMsgFail(int messageId, int statusValue, String details) {
-                            Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
+                            Log.i("GENERAL","EN EL LOCAL READY ON MSG FAIL");
                         }
 
                         @Override
@@ -255,29 +268,39 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
                             return null;
                         }
                     };
-                    PairingMsg msg = new PairingMsg("pd","PairDisconect");
-                    try {
-                        message.sendMsg(msg, future);
-                    }catch (Exception e){
-                        Log.i("GENERAL","EN EL CATCH "+e.getMessage());
-                    }
-
+                    ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
+                } catch (Exception e) {
+                    Log.i("GENERAL", "doCallServiceForProfilePairing Exception");
+                    e.printStackTrace();
                 }
+                return null;
+            }
+        });
+    }
 
-                @Override
-                public void onMsgFail(int messageId, int statusValue, String details) {
-                    Log.i("GENERAL","EN EL LOCAL READY ON MSG FAIL");
-                }
+    private void doCallForProfilePairingDisconnect(CallProfileAppService call){
+        ProfSerMsgListener<Boolean> future = new ProfSerMsgListener<Boolean>() {
+            @Override
+            public void onMessageReceive(int messageId, Boolean message) {
+                Log.i("GENERAL","EN EL FUTURE ON MESSAGE RECEIVE");
+            }
 
-                @Override
-                public String getMessageName() {
-                    return null;
-                }
-            };
-            ioPConnect.callService(EnabledServices.PROFILE_PAIRING.getName(), localProfile, remoteProfile, tryUpdateRemoteServices, localReadyListener);
+            @Override
+            public void onMsgFail(int messageId, int statusValue, String details) {
+                Log.i("GENERAL","EN EL ON FUTURE MESSAGE FAIL");
+            }
+
+            @Override
+            public String getMessageName() {
+                return null;
+            }
+        };
+        PairingMsg msg = new PairingMsg();
+        try {
+            Log.i("GENERAL","doCallForProfilePairingDisconnect SENDING MESSAGE");
+            call.sendMsg(msg, future);
         }catch (Exception e){
-            Log.i("GENERAL","Exception"+e.getMessage());
-            readyListener.onMsgFail(0,0,"In catch");
+            Log.i("GENERAL","doCallForProfilePairingDisconnect EN EL CATCH "+e.getMessage());
         }
     }
 
