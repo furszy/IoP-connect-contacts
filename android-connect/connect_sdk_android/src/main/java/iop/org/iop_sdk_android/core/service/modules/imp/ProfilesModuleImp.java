@@ -45,7 +45,7 @@ import iop.org.iop_sdk_android.core.utils.ImageUtils;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_CHECK_IN_FAIL;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_CONNECTED;
-import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_DISCONNECTED;
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_DISCONNECTED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_RESPONSE_PAIR_RECEIVED;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_NAME;
@@ -95,7 +95,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
 
         @Override
         public void onPairDisconnectReceived(String remotePubKey) {
-            Intent intent = new Intent(ACTION_ON_PROFILE_DISCONNECTED);
+            Intent intent = new Intent(ACTION_ON_PAIR_DISCONNECTED);
             intent.putExtra(INTENT_EXTRA_PROF_KEY,remotePubKey);
             localBroadcastManager.sendBroadcast(intent);
         }
@@ -244,6 +244,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             return;
         }
         pairingService.disconectProfileService(remoteHexPublicKey);
+
         readyListener.onMessageReceive(1,true);
         if (pairingService.hasOpenCall(remoteHexPublicKey)) {
             logger.info("disconnectProfile EXIST CALL");

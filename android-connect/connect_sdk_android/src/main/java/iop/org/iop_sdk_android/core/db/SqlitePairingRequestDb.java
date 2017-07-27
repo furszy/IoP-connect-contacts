@@ -156,7 +156,7 @@ public class SqlitePairingRequestDb extends AbstractSqliteDb<PairingRequest> imp
 
     @Override
     public List<PairingRequest> openPairingRequests(String senderPubKey) {
-        Cursor cursor = getData(PAIRING_COLUMN_STATUS+" != '"+PairingMsgTypes.PAIR_ACCEPT.getType()+"'");
+        Cursor cursor = getData(PAIRING_COLUMN_STATUS+" != '"+PairingMsgTypes.PAIR_ACCEPT.getType()+"' AND "+PAIRING_COLUMN_STATUS+" != '"+PairingMsgTypes.PAIR_DISCONNECT.getType()+"'");
         List<PairingRequest> list = new ArrayList<>();
         if (cursor.moveToFirst()){
             do {

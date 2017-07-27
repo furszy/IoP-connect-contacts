@@ -1,5 +1,6 @@
 package org.furszy.contacts;
 
+import android.app.ActionBar;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -45,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
-import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PROFILE_DISCONNECTED;
+import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_ON_PAIR_DISCONNECTED;
 import static org.furszy.contacts.ui.chat.WaitingChatActivity.REMOTE_PROFILE_PUB_KEY;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.ACTION_PROFILE_UPDATED_CONSTANT;
 import static iop.org.iop_sdk_android.core.IntentBroadcastConstants.INTENT_EXTRA_PROF_KEY;
@@ -70,9 +71,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
     private View root;
     private CircleImageView imgProfile;
-
     private TextView txt_name, disconnected_message;
-  
     private Button btn_disconnect;
     private ProgressBar progress_bar;
 
@@ -83,6 +82,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
     private boolean isMyProfile;
     private boolean searchForProfile = false;
+    private static final int OPTIONS_DELETE = 1;
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -93,14 +93,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                     profileInformation = anRedtooth.getMyProfile();
                     loadProfileData();
                 }
-            } else if (action.equals(ACTION_ON_PROFILE_DISCONNECTED)) {
-                Bundle extras = getIntent().getExtras();
-                if (extras != null){
-                    String remoteProfile = extras.getString(INTENT_EXTRA_PROF_KEY);
-                    if (profileInformation!=null && profileInformation.getHexPublicKey().equals(remoteProfile)){
-                        loadProfileData();
-                    }
-                }
+            } else if (action.equals(ACTION_ON_PAIR_DISCONNECTED)) {
+                logger.info("EN EL RECEIVER DE PROFILEINFORMATION");
+                loadProfileData();
             }
         }
     };
@@ -109,6 +104,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     public boolean onCreateOptionsMenu(Menu menu) {
         if (getIntent()!=null && getIntent().hasExtra(IS_MY_PROFILE)) {
             getMenuInflater().inflate(R.menu.my_profile_menu, menu);
+        } else {
+            MenuItem menuItem = menu.add(0,OPTIONS_DELETE,0,R.string.delete_contact);
+            return super.onCreateOptionsMenu(menu);
         }
         return true;
     }
@@ -118,6 +116,9 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
             case R.id.editProfile:
                 Intent myIntent = new Intent(this,ProfileActivity.class);
                 startActivity(myIntent);
+                return true;
+            case OPTIONS_DELETE:
+                tappedBtnDisconnect();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -130,7 +131,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setBackgroundDrawable(new ColorDrawable(Color.parseColor("#2998ff")));
-        localBroadcastManager.registerReceiver(receiver,new IntentFilter(ACTION_ON_PROFILE_DISCONNECTED));
+        localBroadcastManager.registerReceiver(receiver,new IntentFilter(ACTION_ON_PAIR_DISCONNECTED));
 
         module = ((App)getApplication()).getAnRedtooth().getRedtooth();
 
@@ -148,28 +149,28 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         imgProfile = (CircleImageView) root.findViewById(R.id.profile_image);
         txt_name = (TextView) root.findViewById(R.id.txt_name);
         btn_disconnect = (Button) root.findViewById(R.id.btn_disconnect);
-      
         disconnected_message = (TextView) root.findViewById(R.id.disconnected_message);
         disconnected_message.setVisibility(View.GONE);
-
         progress_bar = (ProgressBar) root.findViewById(R.id.progress_bar);
         txt_chat = (TextView) root.findViewById(R.id.txt_chat);
         txt_chat.setOnClickListener(this);
-
+        btn_disconnect.setEnabled(false);
         btn_disconnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                tappedBtnDisconnect();
+                tappedBtnReconnect();
             }
         });
 
         Bundle extras = getIntent().getExtras();
         if (extras!=null){
             if (extras.containsKey(INTENT_EXTRA_PROF_KEY)) {
+                logger.info("in case when INTENT_EXTRA_PROF_KEY");
                 byte[] pubKey = extras.getByteArray(INTENT_EXTRA_PROF_KEY);
                 profileInformation = module.getKnownProfile(CryptoBytes.toHexString(pubKey));
                 // and schedule to try to update this profile information..
                 searchForProfile = true;
+
             }else if (extras.containsKey(IS_MY_PROFILE)){
                 isMyProfile = true;
                 profileInformation = module.getMyProfile();
@@ -193,6 +194,11 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     private void tappedBtnDisconnect() {
         if (flag.compareAndSet(true,true)){ return; }
         flag.set(true);
+        if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
+
+            flag.set(false);
+            return;
+        }
         showLoading();
         executor.submit(new Runnable() {
             @Override
@@ -240,10 +246,18 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         });
     }
 
+    private void tappedBtnReconnect(){
+        Log.i("GENERAL","tappedBTNRECONNECT");
+    }
+
     private void loadProfileData() {
         if (profileInformation!=null) {
             if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
-                logger.info("profile is disconnected");
+                btn_disconnect.setEnabled(true);
+                btn_disconnect.setText("Send a request");
+                btn_disconnect.setBackgroundColor(getResources().getColor(R.color.bgBlue,null));
+                btn_disconnect.setTextColor(getResources().getColor(R.color.white,null));
+                disconnected_message.setVisibility(View.VISIBLE);
             }
             txt_name.setText(profileInformation.getName());
             if (profileInformation.getImg() != null && profileInformation.getImg().length > 1) {
@@ -335,6 +349,10 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         int id = v.getId();
         if (id==R.id.txt_chat){
             if (isMyProfile) { return; }
+            if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
+                Toast.makeText(v.getContext(),"You need connect with "+profileInformation.getName()+" in order to send messages",Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (flag.compareAndSet(false,true)) {
                 Toast.makeText(v.getContext(),"Sending chat request..",Toast.LENGTH_SHORT).show();
                 executor.submit(new Runnable() {

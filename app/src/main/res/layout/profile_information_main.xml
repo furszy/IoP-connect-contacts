@@ -58,12 +58,10 @@
             android:paddingBottom="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="disconnected_message"
+            android:text="@string/disconnected_message"
             android:gravity="center"
             android:textColor="@color/mainText"
             android:textSize="15sp"/>
-
-
 
     </LinearLayout>
 
