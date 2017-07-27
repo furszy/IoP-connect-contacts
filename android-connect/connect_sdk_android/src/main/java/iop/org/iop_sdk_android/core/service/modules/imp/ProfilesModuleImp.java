@@ -96,6 +96,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
         @Override
         public void onPairDisconnectReceived(String remotePubKey) {
             Intent intent = new Intent(ACTION_ON_PAIR_DISCONNECTED);
+            Log.i("GENERAL","REMOTE PUB KEY "+remotePubKey);
             intent.putExtra(INTENT_EXTRA_PROF_KEY,remotePubKey);
             localBroadcastManager.sendBroadcast(intent);
         }
@@ -236,7 +237,7 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
     }
 
     @Override
-    public void disconnectProfile(Profile localProfile, ProfileInformation remoteProfile, final ProfSerMsgListener<Boolean> readyListener) {
+    public void disconnectProfile(Profile localProfile, ProfileInformation remoteProfile, boolean sendMsg, final ProfSerMsgListener<Boolean> readyListener) {
         String remoteHexPublicKey = remoteProfile.getHexPublicKey();
         PairingAppService pairingService = localProfile.getAppService(EnabledServices.PROFILE_PAIRING.getName(), PairingAppService.class);
         if (pairingService == null) {
@@ -244,8 +245,8 @@ public class ProfilesModuleImp extends AbstractModule implements ProfilesModule{
             return;
         }
         pairingService.disconectProfileService(remoteHexPublicKey);
-
         readyListener.onMessageReceive(1,true);
+        if (!sendMsg) { return; }
         if (pairingService.hasOpenCall(remoteHexPublicKey)) {
             logger.info("disconnectProfile EXIST CALL");
             CallProfileAppService call = pairingService.getOpenCall(remoteHexPublicKey);

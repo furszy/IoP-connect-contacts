@@ -95,6 +95,8 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                 }
             } else if (action.equals(ACTION_ON_PAIR_DISCONNECTED)) {
                 logger.info("EN EL RECEIVER DE PROFILEINFORMATION");
+                String pubKey = profileInformation.getHexPublicKey();
+                profileInformation = module.getKnownProfile(pubKey);
                 loadProfileData();
             }
         }
@@ -195,11 +197,6 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     private void tappedBtnDisconnect() {
         if (flag.compareAndSet(true,true)){ return; }
         flag.set(true);
-        if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
-
-            flag.set(false);
-            return;
-        }
         showLoading();
         executor.submit(new Runnable() {
             @Override
@@ -242,7 +239,12 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                     flag.set(false);
                     e.printStackTrace();
                 }
-                anRedtooth.disconnectProfile(profileInformation, readyListener);
+                if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
+                    anRedtooth.disconnectProfile(profileInformation, false, readyListener);
+                } else {
+                    anRedtooth.disconnectProfile(profileInformation, true, readyListener);
+                }
+
             }
         });
     }
