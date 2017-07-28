@@ -192,7 +192,8 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
     public Cursor getData(String localProfileOwnerOfContacts,String pubKey) {
         if (pubKey==null) throw new IllegalArgumentException("pubKey cannot be null");
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME+" where "+CONTACTS_COLUMN_PUB_KEY+"='"+pubKey+"' and "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '"+localProfileOwnerOfContacts+"'", null );
+        //and "+CONTACTS_COLUMN_PAIR+" != '"+PairStatus.DISCONNECTED.name()+"'"
+        Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME+" where "+CONTACTS_COLUMN_PUB_KEY+"='"+pubKey+"' and "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '"+localProfileOwnerOfContacts+"'" , null );
         return res;
     }
 

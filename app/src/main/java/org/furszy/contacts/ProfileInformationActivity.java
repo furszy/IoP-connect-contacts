@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -168,11 +169,13 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
         Bundle extras = getIntent().getExtras();
         if (extras!=null){
             if (extras.containsKey(INTENT_EXTRA_PROF_KEY)) {
-                logger.info("in case when INTENT_EXTRA_PROF_KEY");
+                Log.i("GENERAL","in case when INTENT_EXTRA_PROF_KEY");
                 byte[] pubKey = extras.getByteArray(INTENT_EXTRA_PROF_KEY);
+                Log.i("GENERAL","pubkey "+CryptoBytes.toHexString(pubKey));
                 profileInformation = module.getKnownProfile(CryptoBytes.toHexString(pubKey));
                 // and schedule to try to update this profile information..
                 searchForProfile = true;
+                Log.i("GENERAL","USER DATA "+profileInformation);
 
             }else if (extras.containsKey(IS_MY_PROFILE)){
                 isMyProfile = true;
@@ -250,11 +253,75 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
     }
 
     private void tappedBtnReconnect(){
-        Log.i("GENERAL","tappedBTNRECONNECT");
+        if (flag.compareAndSet(true,true)){ return; }
+        flag.set(true);
+        showLoading();
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    MsgListenerFuture<ProfileInformation> future = new MsgListenerFuture<>();
+                    future.setListener(new BaseMsgFuture.Listener<ProfileInformation>() {
+                        @Override
+                        public void onAction(int messageId, ProfileInformation object) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    flag.set(false);
+                                    hideLoading();
+                                    Log.i("GENERAL", "pairing request sent");
+                                    Toast.makeText(ProfileInformationActivity.this, R.string.pairing_success, Toast.LENGTH_LONG).show();
+
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFail(int messageId, final int status, final String statusDetail) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    flag.set(false);
+                                    hideLoading();
+                                    Log.i("GENERAL", "pairing request fail on Fail");
+                                    String baseMsg = getResources().getString(R.string.pairing_fail);
+                                    Toast.makeText(ProfileInformationActivity.this, baseMsg+": Remote profile not available", Toast.LENGTH_LONG).show();
+                                }
+                            });
+                        }
+                    });
+                    anRedtooth.requestPairingProfile(profileInformation.getPublicKey(), profileInformation.getName(), profileInformation.getHomeHost(), future);
+
+                } catch (final IllegalArgumentException e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            flag.set(false);
+                            hideLoading();
+                            Log.i(TAG, "pairing request fail  IllegalArgument" + e.getMessage());
+                            String baseMsg = getResources().getString(R.string.pairing_fail);
+                            Toast.makeText(ProfileInformationActivity.this, baseMsg + ": " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+                } catch (final Exception e) {
+                    e.printStackTrace();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            flag.set(false);
+                            hideLoading();
+                            Log.i(TAG, "pairing request fail  Exception:" + e.getMessage());
+                            Toast.makeText(ProfileInformationActivity.this,  R.string.pairing_fail, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void loadProfileData() {
         if (profileInformation!=null) {
+            Log.i("GENERAL","PAIR STATUS: "+profileInformation.getPairStatus());
             if (profileInformation.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)) {
                 btn_disconnect.setEnabled(true);
                 btn_disconnect.setText("Send a request");
@@ -281,6 +348,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
             executor = Executors.newSingleThreadExecutor();
         }
         if (searchForProfile){
+            Log.i("GENERAL","SEARCH PROFILE");
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -289,6 +357,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                         msgListenerFuture.setListener(new BaseMsgFuture.Listener<ProfileInformation>() {
                             @Override
                             public void onAction(int messageId, final ProfileInformation object) {
+                                Log.i("GENERAL","PROFILE INFORMATION ON ACTION"+profileInformation);
                                 profileInformation = object;
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -300,7 +369,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
 
                             @Override
                             public void onFail(int messageId, int status, String statusDetail) {
-                                logger.info("Search profile on network fail, detail:"+statusDetail);
+                                Log.i("GENERAL","Search profile on network fail, detail:"+statusDetail);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -317,6 +386,13 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                     } catch (CantConnectException e) {
                         e.printStackTrace();
                     } catch (Exception e){
+                        Log.i("GENERAL","EXCEPTION "+e.getMessage());
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                onBackPressed();
+                            }
+                        });
                         e.printStackTrace();
                     }
                 }
@@ -379,14 +455,14 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                                 }
 
                                 @Override
-                                public void onFail(int messageId, int status, String statusDetail) {
-                                    Log.i("TAG", "onFail");
-                                    Log.e(TAG, "fail chat request: " + statusDetail + ", id: " + messageId);
+                                public void onFail(int messageId, int status, final String statusDetail) {
+                                    Log.i("GENERAL", "onFail");
+                                    Log.e("GENERAL", "fail chat request: " + statusDetail + ", id: " + messageId);
                                     flag.set(false);
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            Toast.makeText(ProfileInformationActivity.this, "Chat request fail", Toast.LENGTH_LONG).show();
+                                            Toast.makeText(ProfileInformationActivity.this, "Chat request fail: Remote profile not available", Toast.LENGTH_LONG).show();
                                         }
                                     });
                                 }
