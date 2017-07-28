@@ -161,16 +161,14 @@ public class PairingAppService extends AppService {
                                 logger.info("PAIR_DISCONNECT CAUTION WHEN I RECIVED A MSG REMOTE IS LOCAL");
                                 logger.info("REMOTE PUB KEY {}",profileServiceOwner.getHexPublicKey());
                                 logger.info("SENDER PUB KEY {}",callProfileAppService.getRemotePubKey());
-                                boolean wasUpdatedPairing = pairingRequestsManager.updateStatus(
+                                pairingRequestsManager.disconnectParingProfile(
                                         callProfileAppService.getRemotePubKey(),
-                                        profileServiceOwner.getHexPublicKey(),
-                                        PairingMsgTypes.PAIR_DISCONNECT,
-                                        ProfileInformationImp.PairStatus.DISCONNECTED);
+                                        profileServiceOwner.getHexPublicKey());
                                 boolean wasUpdatedProfile = profilesManager.updatePaired(
                                         profileServiceOwner.getHexPublicKey(),
                                         callProfileAppService.getRemotePubKey(),
                                         ProfileInformationImp.PairStatus.DISCONNECTED);
-                                logger.info("UDATESTATUS IN PAIR_DISCONNECT {} IN PROFILE {}",wasUpdatedPairing, wasUpdatedProfile);
+                                logger.info("UDATESTATUS IN PROFILE {}", wasUpdatedProfile);
                                 if (pairingListener!=null){
                                     pairingListener.onPairDisconnectReceived(callProfileAppService.getRemotePubKey());
                                 }else {
