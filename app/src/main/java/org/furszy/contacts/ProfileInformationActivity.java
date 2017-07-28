@@ -437,6 +437,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                     @Override
                     public void run() {
                         try {
+                            Log.i("GENERAL","onClick in run");
                             MsgListenerFuture<Boolean> readyListener = new MsgListenerFuture<>();
                             readyListener.setListener(new BaseMsgFuture.Listener<Boolean>() {
                                 @Override
@@ -445,10 +446,11 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
+                                            Log.i("GENERAL", "readyListener ON SUCESS");
                                             Toast.makeText(ProfileInformationActivity.this, "Chat request sent", Toast.LENGTH_LONG).show();
-                                            Intent intent = new Intent(ProfileInformationActivity.this, WaitingChatActivity.class);
-                                            intent.putExtra(WaitingChatActivity.IS_CALLING, false);
-                                            startActivity(intent);
+//                                            Intent intent = new Intent(ProfileInformationActivity.this, WaitingChatActivity.class);
+//                                            intent.putExtra(WaitingChatActivity.IS_CALLING, false);
+//                                            startActivity(intent);
                                         }
                                     });
                                 }
@@ -468,6 +470,7 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                             });
                             anRedtooth.requestChat(profileInformation, readyListener, TimeUnit.SECONDS, 45);
                         } catch (ChatCallAlreadyOpenException e) {
+
                             e.printStackTrace();
                             // chat call already open
                             // first send the acceptance

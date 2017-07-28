@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
@@ -90,6 +91,7 @@ public class WaitingChatActivity extends BaseActivity implements View.OnClickLis
         txt_title = (TextView) root.findViewById(R.id.txt_title);
         remotePk = getIntent().getStringExtra(REMOTE_PROFILE_PUB_KEY);
         isCalling = getIntent().hasExtra(IS_CALLING);
+        Log.i("GENERAL","onCreateView REMOTE PK "+remotePk);
         if (isCalling){
             root.findViewById(R.id.single_cancel_container).setVisibility(View.VISIBLE);
             root.findViewById(R.id.btn_cancel_chat_alone).setOnClickListener(this);
@@ -160,8 +162,9 @@ public class WaitingChatActivity extends BaseActivity implements View.OnClickLis
                 }
             }
         });
-
+        Log.i("GENERAL","REMOTE PK "+remotePk);
         profileInformation = anRedtooth.getKnownProfile(remotePk);
+        Log.i("GENERAL","profileInformation "+profileInformation);
         txt_name.setText(profileInformation.getName());
         if (profileInformation.getImg()!=null){
             Bitmap bitmap = BitmapFactory.decodeByteArray(profileInformation.getImg(),0,profileInformation.getImg().length);
