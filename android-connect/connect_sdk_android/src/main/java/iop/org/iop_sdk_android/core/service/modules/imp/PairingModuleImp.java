@@ -49,7 +49,8 @@ public class PairingModuleImp extends AbstractModule implements PairingModule{
         // check if the profile already exist
         ProfileInformation profileInformationDb = null;
         String remotePubKeyStr = CryptoBytes.toHexString(remotePubKey);
-        if((profileInformationDb = ioPConnectService.getProfilesDb().getProfile(localProfile.getHexPublicKey(),remotePubKeyStr))!=null){
+        profileInformationDb = ioPConnectService.getProfilesDb().getProfile(localProfile.getHexPublicKey(),remotePubKeyStr);
+        if((profileInformationDb)!=null && !profileInformationDb.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)){
             Log.i("GENERAL", "PARING REQUEST EXIST ALREADY KNOWN PROFILE "+profileInformationDb.getName());
             if(profileInformationDb.getPairStatus() != null)
                 throw new IllegalArgumentException("Already known profile");
@@ -68,6 +69,7 @@ public class PairingModuleImp extends AbstractModule implements PairingModule{
                 remoteName,
                 ProfileInformationImp.PairStatus.WAITING_FOR_RESPONSE
         );
+
         ioPConnect.requestPairingProfile(pairingRequest, new ProfSerMsgListener<ProfileInformation>() {
             @Override
             public void onMessageReceive(int messageId, ProfileInformation remote) {
