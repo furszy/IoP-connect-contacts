@@ -149,7 +149,8 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                     public void run() {
                                         enableSendBtn();
                                         Log.i(TAG, "pairing request fail  Exception:"+ e.getMessage());
-                                        Snackbar.make(v, R.string.pairing_fail, Snackbar.LENGTH_LONG).show();
+                                        String baseMsg = getResources().getString(R.string.pairing_fail);
+                                        Snackbar.make(v,baseMsg+": "+e.getMessage(), Snackbar.LENGTH_LONG).show();
                                         progressBar.setVisibility(View.INVISIBLE);
 
                                     }

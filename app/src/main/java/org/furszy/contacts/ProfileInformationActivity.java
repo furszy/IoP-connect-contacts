@@ -96,9 +96,12 @@ public class ProfileInformationActivity extends BaseActivity implements View.OnC
                 }
             } else if (action.equals(ACTION_ON_PAIR_DISCONNECTED)) {
                 logger.info("EN EL RECEIVER DE PROFILEINFORMATION");
-                String pubKey = profileInformation.getHexPublicKey();
-                profileInformation = module.getKnownProfile(pubKey);
-                loadProfileData();
+                if (profileInformation != null) {
+                    String pubKey = profileInformation.getHexPublicKey();
+                    profileInformation = module.getKnownProfile(pubKey);
+                    loadProfileData();
+                }
+
             }
         }
     };
