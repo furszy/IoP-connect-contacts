@@ -673,7 +673,7 @@ public class IoPConnect implements ConnectionListener {
                     try {
                         logger.info("GENERAL: PAIRING ACCEPT");
                         call.sendMsg(PairingMsgTypes.PAIR_ACCEPT.getType(), future);
-                        call.dispose();
+                        //call.dispose();
                     } catch (Exception e) {
                         logger.error("call sendMsg error",e);
                         future.onMsgFail(messageId,400,e.getMessage());
