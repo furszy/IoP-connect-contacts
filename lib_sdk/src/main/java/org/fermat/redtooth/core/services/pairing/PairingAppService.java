@@ -157,6 +157,24 @@ public class PairingAppService extends AppService {
                                     }
                                 }
                                 break;
+                            case PAIR_DISCONNECT:
+                                logger.info("PAIR_DISCONNECT CAUTION WHEN I RECIVED A MSG REMOTE IS LOCAL");
+                                logger.info("REMOTE PUB KEY {}",profileServiceOwner.getHexPublicKey());
+                                logger.info("SENDER PUB KEY {}",callProfileAppService.getRemotePubKey());
+                                pairingRequestsManager.disconnectParingProfile(
+                                        callProfileAppService.getRemotePubKey(),
+                                        profileServiceOwner.getHexPublicKey());
+                                boolean wasUpdatedProfile = profilesManager.updatePaired(
+                                        profileServiceOwner.getHexPublicKey(),
+                                        callProfileAppService.getRemotePubKey(),
+                                        ProfileInformationImp.PairStatus.DISCONNECTED);
+                                logger.info("UDATESTATUS IN PROFILE {}", wasUpdatedProfile);
+                                if (pairingListener!=null){
+                                    pairingListener.onPairDisconnectReceived(callProfileAppService.getRemotePubKey());
+                                }else {
+                                    logger.info("pairListener null, please add it if you want to receive pairs");
+                                }
+                                break;
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -164,6 +182,12 @@ public class PairingAppService extends AppService {
                 }
             });
         }
+    }
+
+    public void disconectProfileService(String remoteHexPublicKey){
+        String localHexPublicKey = profileServiceOwner.getHexPublicKey();
+        profilesManager.disconnectProfile(localHexPublicKey, remoteHexPublicKey);
+        pairingRequestsManager.disconnectParingProfile(localHexPublicKey, remoteHexPublicKey);
     }
 
     public PairingListener getPairingListener() {

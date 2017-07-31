@@ -6,11 +6,13 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
 import org.fermat.redtooth.profile_server.ProfileInformation;
 import org.fermat.redtooth.profile_server.imp.ProfileInformationImp;
+import org.fermat.redtooth.profile_server.imp.ProfileInformationImp.PairStatus;
 import org.fermat.redtooth.profiles_manager.ProfilesManager;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -98,7 +100,15 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         onCreate(db);
     }
 
-    public long insertContact (String localProfileOwnerOfThisContact,ProfileInformation profile) {
+    @Override
+    public void disconnectProfile(String localProfilePubKey, String remoteHexPublicKey) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        int rows = db.delete(CONTACTS_TABLE_NAME, CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+"=? and "+CONTACTS_COLUMN_PUB_KEY+"=?",new String[]{localProfilePubKey,remoteHexPublicKey});
+        Log.i("GENERAL","Rows delete in disconnectProfile " + rows);
+        db.close();
+    }
+
+    public long insertContact (String localProfileOwnerOfThisContact, ProfileInformation profile) {
         SQLiteDatabase db = this.getWritableDatabase();
         long id = db.insert(CONTACTS_TABLE_NAME, null, buildContent(profile,localProfileOwnerOfThisContact));
         return id;
@@ -182,7 +192,8 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
     public Cursor getData(String localProfileOwnerOfContacts,String pubKey) {
         if (pubKey==null) throw new IllegalArgumentException("pubKey cannot be null");
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME+" where "+CONTACTS_COLUMN_PUB_KEY+"='"+pubKey+"' and "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '"+localProfileOwnerOfContacts+"'", null );
+        //and "+CONTACTS_COLUMN_PAIR+" != '"+PairStatus.DISCONNECTED.name()+"'"
+        Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME+" where "+CONTACTS_COLUMN_PUB_KEY+"='"+pubKey+"' and "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '"+localProfileOwnerOfContacts+"'" , null );
         return res;
     }
 
@@ -351,7 +362,8 @@ public class SqliteProfilesDb extends SQLiteOpenHelper implements ProfilesManage
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor res =  db.rawQuery( "select * from "+CONTACTS_TABLE_NAME
                 +" where "+CONTACTS_COLUMN_DEVICE_PROFILE_PUB_KEY+" = '" +localProfileOwnerOfContacts+"' " +
-                "AND "+CONTACTS_COLUMN_PAIR+"='"+ ProfileInformationImp.PairStatus.PAIRED.name()+"'", null );
+                "AND ("+CONTACTS_COLUMN_PAIR+"='"+ ProfileInformationImp.PairStatus.PAIRED.name()+
+                "' OR "+CONTACTS_COLUMN_PAIR+"='"+ PairStatus.DISCONNECTED.name()+"')", null );
         if(res.moveToFirst()) {
             do {
                 list.add(buildFrom(res).profileInformation);

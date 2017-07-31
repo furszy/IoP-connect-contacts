@@ -402,6 +402,17 @@ public class IoPConnectService extends Service implements ModuleRedtooth, Engine
     }
 
     @Override
+    public void disconnectProfile(ProfileInformation remoteProfile, boolean sendMessage, final ProfSerMsgListener<Boolean> readyListener) {
+        core.getModule(EnabledServices.PROFILE_DATA.getName(), ProfilesModule.class)
+                .disconnectProfile(
+                        profile,
+                        remoteProfile,
+                        sendMessage,
+                        readyListener
+                );
+    }
+
+    @Override
     public void acceptChatRequest(String remoteHexPublicKey, ProfSerMsgListener<Boolean> future) throws Exception {
         core.getModule(EnabledServices.CHAT.getName(), ChatModule.class)
                 .acceptChatRequest(

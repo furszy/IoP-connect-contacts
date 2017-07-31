@@ -108,6 +108,7 @@ public class IoPProfileConnection implements CallsListener, CallProfileAppServic
         scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+                logger.info("CALL FIRST TIME IN CHECKCALLS");
                 checkCalls();
             }
         },30,CALL_IDLE_TIME, TimeUnit.SECONDS);
@@ -592,16 +593,21 @@ public class IoPProfileConnection implements CallsListener, CallProfileAppServic
 
 
     private void checkCalls(){
+        logger.info("IN CHECKCALLS------------------------------OPEN VALUE--"+openCall.values());
         try {
             for (CallProfileAppService callProfileAppService : openCall.values()) {
+                logger.info("IN CHECKCALLS--------------------------"+openCall.values());
+
                 // check if the call is idle and close it
                 long now = System.currentTimeMillis();
+                logger.info("IN CHECKCALLS------------------------now "+now);
                 if (callProfileAppService.getCreationTime() + CALL_IDLE_TIME < now
                         &&
                         callProfileAppService.getLastMessageReceived() + CALL_IDLE_TIME < now
                         &&
                         callProfileAppService.getLastMessageSent() + CALL_IDLE_TIME < now
                         ) {
+                    logger.info("IN CHECKCALLS------------------------now "+now);
                     // if the call doesn't receive or sent anything on a CALL_IDLE_TIME period close it
                     callProfileAppService.dispose();
                 }

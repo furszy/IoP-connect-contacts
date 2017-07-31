@@ -1,5 +1,7 @@
 package iop.org.iop_sdk_android.core.service.modules.imp;
 
+import android.util.Log;
+
 import org.fermat.redtooth.core.IoPConnect;
 import org.fermat.redtooth.crypto.CryptoBytes;
 import org.fermat.redtooth.global.Version;
@@ -45,9 +47,10 @@ public class PairingModuleImp extends AbstractModule implements PairingModule{
     @Override
     public void requestPairingProfile(final Profile localProfile, byte[] remotePubKey, String remoteName, final String psHost, final ProfSerMsgListener<ProfileInformation> listener) throws Exception {
         // check if the profile already exist
-        ProfileInformation profileInformationDb = null;
         String remotePubKeyStr = CryptoBytes.toHexString(remotePubKey);
-        if((profileInformationDb = ioPConnectService.getProfilesDb().getProfile(localProfile.getHexPublicKey(),remotePubKeyStr))!=null){
+        final ProfileInformation profileInformationDb = ioPConnectService.getProfilesDb().getProfile(localProfile.getHexPublicKey(),remotePubKeyStr);
+        if((profileInformationDb)!=null && !profileInformationDb.getPairStatus().equals(ProfileInformationImp.PairStatus.DISCONNECTED)){
+            Log.i("GENERAL", "PARING REQUEST EXIST ALREADY KNOWN PROFILE "+profileInformationDb.getName());
             if(profileInformationDb.getPairStatus() != null)
                 throw new IllegalArgumentException("Already known profile");
         }
@@ -65,13 +68,22 @@ public class PairingModuleImp extends AbstractModule implements PairingModule{
                 remoteName,
                 ProfileInformationImp.PairStatus.WAITING_FOR_RESPONSE
         );
+
         ioPConnect.requestPairingProfile(pairingRequest, new ProfSerMsgListener<ProfileInformation>() {
             @Override
             public void onMessageReceive(int messageId, ProfileInformation remote) {
                 remote.setHomeHost(psHost);
                 remote.setPairStatus(ProfileInformationImp.PairStatus.WAITING_FOR_RESPONSE);
-                // Save invisible contact
-                ioPConnectService.getProfilesDb().saveProfile(localProfile.getHexPublicKey(),remote);
+                Log.i("GENERAL","REMOTEPROFILE PUB "+remote.getHexPublicKey());
+                Log.i("GENERAL","profileInformationDb PUB "+profileInformationDb);
+                if (profileInformationDb != null && profileInformationDb.getHexPublicKey().equals(remote.getHexPublicKey())) {
+                    ioPConnectService.getProfilesDb().updateProfile(localProfile.getHexPublicKey(),remote);
+                } else {
+                    // Save invisible contact
+                    ioPConnectService.getProfilesDb().saveProfile(localProfile.getHexPublicKey(),remote);
+                }
+
+
                 // update backup profile is there is any
                 String backupProfilePath = null;
                 if((backupProfilePath = ioPConnectService.getConfPref().getBackupProfilePath())!=null){

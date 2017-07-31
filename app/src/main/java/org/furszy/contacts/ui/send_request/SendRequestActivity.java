@@ -94,6 +94,7 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
 
                 } else {
                     progressBar.setVisibility(View.VISIBLE);
+
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -106,6 +107,7 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                             @Override
                                             public void run() {
                                                 Log.i(TAG, "pairing request sent");
+
                                                 Snackbar.make(v, R.string.pairing_success, Snackbar.LENGTH_LONG).show();
                                                 progressBar.setVisibility(View.INVISIBLE);
                                                 enableSendBtn();
@@ -118,11 +120,11 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                         runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
-                                                Log.i(TAG, "pairing request fail");
-                                                Snackbar.make(v, R.string.pairing_fail, Snackbar.LENGTH_LONG).show();
+                                                Log.i(TAG, "pairing request fail on Fail");
+                                                String baseMsg = getResources().getString(R.string.pairing_fail);
+                                                Snackbar.make(v, baseMsg+": Remote profile not available", Snackbar.LENGTH_LONG).show();
                                                 progressBar.setVisibility(View.INVISIBLE);
                                                 enableSendBtn();
-                                                //onBackPressed();
                                             }
                                         });
                                     }
@@ -133,8 +135,9 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Log.i(TAG, "pairing request fail  "+ e.getMessage());
-                                        Snackbar.make(v, R.string.pairing_fail, Snackbar.LENGTH_LONG).show();
+                                        Log.i(TAG, "pairing request fail  IllegalArgument"+ e.getMessage());
+                                        String baseMsg = getResources().getString(R.string.pairing_fail);
+                                        Snackbar.make(v, baseMsg+": "+e.getMessage(), Snackbar.LENGTH_LONG).show();
                                         enableSendBtn();
                                         progressBar.setVisibility(View.INVISIBLE);
                                     }
@@ -145,8 +148,9 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                                     @Override
                                     public void run() {
                                         enableSendBtn();
-                                        Log.i(TAG, "pairing request fail  "+ e.getMessage());
-                                        Snackbar.make(v, R.string.pairing_fail, Snackbar.LENGTH_LONG).show();
+                                        Log.i(TAG, "pairing request fail  Exception:"+ e.getMessage());
+                                        String baseMsg = getResources().getString(R.string.pairing_fail);
+                                        Snackbar.make(v,baseMsg+": "+e.getMessage(), Snackbar.LENGTH_LONG).show();
                                         progressBar.setVisibility(View.INVISIBLE);
 
                                     }
@@ -177,7 +181,7 @@ public class SendRequestActivity extends BaseActivity implements View.OnClickLis
                     //Toast.makeText(this,address,Toast.LENGTH_LONG).show();
                     edit_uri.setText(address);
                 }catch (Exception e){
-                    Toast.makeText(this,"Bad profile URI",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,R.string.uri_fail,Toast.LENGTH_LONG).show();
                 }
             }
         }
