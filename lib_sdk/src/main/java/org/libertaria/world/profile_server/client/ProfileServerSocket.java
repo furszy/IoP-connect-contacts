@@ -30,8 +30,7 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileServerSocket.class);
     /** socket id */
-    private String callId;
-    private String callSessionToken;
+    private String tokenId;
     private int port;
     private String host;
     /** Server role type */
@@ -55,10 +54,9 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
         this.executorService = Executors.newFixedThreadPool(3);
     }
 
-    public ProfileServerSocket(SocketFactory socketFactory, String host, int port,IopProfileServer.ServerRoleType portType,String callId,String callSessionToken) throws Exception {
+    public ProfileServerSocket(SocketFactory socketFactory, String host, int port,IopProfileServer.ServerRoleType portType,String tokenId) throws Exception {
         this(socketFactory,host,port,portType);
-        this.callId = callId;
-        this.callSessionToken = callSessionToken;
+        this.tokenId = tokenId;
     }
 
     public void connect() throws IOException {
@@ -76,12 +74,7 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
 
     @Override
     public String getSessionTokenId() {
-        return callSessionToken;
-    }
-
-    @Override
-    public String getId() {
-        return callId;
+        return tokenId;
     }
 
     public void write(IopProfileServer.Message message) throws CantSendMessageException {
@@ -177,7 +170,7 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
         } catch (javax.net.ssl.SSLException e) {
             e.printStackTrace();
             // something bad happen..
-            logger.info("Connection closed, sslException with portType: " + portType + " , " + callId + " removing socket");
+            logger.info("Connection closed, sslException with portType: " + portType + " , " + tokenId + " removing socket");
             try {
                 closeNow();
             } catch (IOException e1) {
@@ -185,7 +178,7 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
             }
         } catch (SocketException e){
             e.printStackTrace();
-            logger.info("Connection closed, sslException with portType: " + portType + " , " + callId + " removing socket");
+            logger.info("Connection closed, sslException with portType: " + portType + " , " + tokenId + " removing socket");
             try {
                 closeNow();
             } catch (IOException e1) {
@@ -203,10 +196,8 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
     @Override
     public void closeNow() throws IOException {
         logger.info("Closing socket port: "+portType);
-        if (readThread!=null && readThread.isAlive()) {
+        if (!readThread.isInterrupted())
             readThread.interrupt();
-            readThread = null;
-        }
         if (executorService!=null){
             executorService.shutdownNow();
             executorService = null;
@@ -293,7 +284,7 @@ public class ProfileServerSocket implements IoSession<IopProfileServer.Message> 
     @Override
     public String toString() {
         return "ProfileServerSocket{" +
-                "tokenId='" + callId + '\'' +
+                "tokenId='" + tokenId + '\'' +
                 ", port=" + port +
                 ", host='" + host + '\'' +
                 ", portType=" + portType +
