@@ -45,10 +45,9 @@ public final class ReconnectionManager {
                                      Profile profile,
                                      String psHost,
                                      IopProfileServer.ServerRoleType portType,
-                                     String callId,
                                      String tokenId,
                                      ConnectionListener connectionListener) {
-        checkParameterList(profile, psHost, portType,callId, tokenId, connectionListener);
+        checkParameterList(profile, psHost, portType, tokenId, connectionListener);
         executeScheduling(waitingTime);
     }
 
@@ -58,16 +57,13 @@ public final class ReconnectionManager {
     public void scheduleReconnection(Profile profile,
                                      String psHost,
                                      IopProfileServer.ServerRoleType portType,
-                                     String callId,
                                      String tokenId,
                                      ConnectionListener connectionListener) {
         checkTimeIncrease();
-        scheduleReconnection(
-                currentWaitingTime,
+        scheduleReconnection(currentWaitingTime,
                 profile,
                 psHost,
                 portType,
-                callId,
                 tokenId,
                 connectionListener);
     }
@@ -90,10 +86,9 @@ public final class ReconnectionManager {
     private void checkParameterList(Profile profile,
                                     String psHost,
                                     IopProfileServer.ServerRoleType portType,
-                                    String callId,
                                     String tokenId,
                                     ConnectionListener connectionListener) {
-        ReconnectionParameters reconnectionParameters = new ReconnectionParameters(profile, psHost, portType,callId, tokenId, connectionListener);
+        ReconnectionParameters reconnectionParameters = new ReconnectionParameters(profile, psHost, portType, tokenId, connectionListener);
         if (!parametersList.contains(reconnectionParameters)) {
             parametersList.add(reconnectionParameters);
         }
@@ -106,9 +101,7 @@ public final class ReconnectionManager {
                 parameters.connectionListener.onConnectionLost(parameters.profile,
                         parameters.psHost,
                         parameters.portType,
-                        parameters.callId,
-                        parameters.tokenId
-                );
+                        parameters.tokenId);
             }
         }
     }
@@ -118,20 +111,17 @@ public final class ReconnectionManager {
         private final String psHost;
         private final IopProfileServer.ServerRoleType portType;
         private final String tokenId;
-        private final String callId;
         private final ConnectionListener connectionListener;
 
         ReconnectionParameters(Profile profile,
                                String psHost,
                                IopProfileServer.ServerRoleType portType,
-                               String callId,
                                String tokenId,
                                ConnectionListener connectionListener) {
             this.profile = profile;
             this.psHost = psHost;
             this.portType = portType;
             this.tokenId = tokenId;
-            this.callId = callId;
             this.connectionListener = connectionListener;
         }
 
