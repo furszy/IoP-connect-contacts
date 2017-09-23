@@ -481,7 +481,6 @@ public class PlatformServiceImp extends Service implements PlatformService, Devi
         }
     }
 
-    ;
 
     private Serializable moduleDataRequest(String clientKey, String dataId, final String serviceName, final String method, final ModuleParameter[] parameters) throws Exception {
         EnabledServices service = EnabledServices.getServiceByName(serviceName);
@@ -502,7 +501,6 @@ public class PlatformServiceImp extends Service implements PlatformService, Devi
                     params[i] = new MsgListener(clientKey, dataId);
                 } else
                     params[i] = o;
-
             }
         }
         try {
@@ -517,7 +515,6 @@ public class PlatformServiceImp extends Service implements PlatformService, Devi
                         if (methodInterface.getName().equals(method)) {
                             m = methodInterface;
                         }
-
                     }
                 }
                 if (module != null) {
@@ -534,7 +531,6 @@ public class PlatformServiceImp extends Service implements PlatformService, Devi
                                 break;
                             }
                         }
-
                     }
                 } else {
                     logger.info("NOT FOUND module");
