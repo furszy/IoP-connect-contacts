@@ -50,11 +50,11 @@ public class ConnectClientService extends Service {
      */
     private ConnectApp connectApp;
 
-    private IPlatformService iServerBrokerService = null;
+    private static IPlatformService iServerBrokerService = null;
     /**
      * Flag indicating whether we have called bind on the service.
      */
-    boolean mPlatformServiceIsBound;
+    volatile boolean mPlatformServiceIsBound;
     /**
      * Module interfaces
      */
@@ -120,11 +120,6 @@ public class ConnectClientService extends Service {
     }
 
     public final Object invokeService(Object o, EnabledServices service, Method method, Object[] args) throws Throwable {
-        if (!mPlatformServiceIsBound) {
-            if (doBindService()) {
-                throw new IllegalStateException("Service is not bound!");
-            }
-        }
         logger.info("Service " + service.getName() + " invoque method " + method.getName());
         ProfSerMsgListener methodListener = null;
         ModuleParameter[] parameters = null;
@@ -158,6 +153,10 @@ public class ConnectClientService extends Service {
         // Save the listener if there is any:
         if (methodListener != null) {
             waitingFutures.put(messageId, methodListener);
+        }
+
+        if (iServerBrokerService == null) {
+            return null;
         }
 
         ModuleObjectWrapper respObject = iServerBrokerService.callMethod(
@@ -203,9 +202,9 @@ public class ConnectClientService extends Service {
     public void onDestroy() {
         super.onDestroy();
         // desconnect and close local socket
-        if (localConnection != null)
+        if (localConnection != null) {
             localConnection.shutdown();
-
+        }
         doUnbindService();
     }
 
@@ -230,20 +229,16 @@ public class ConnectClientService extends Service {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (mPlatformServiceIsBound) {
-                // notify app about the connection
-                connectApp.onConnectClientServiceBind();
-            }
+            connectApp.onConnectClientServiceBind(ConnectClientService.this);
         }
 
         public void onServiceDisconnected(ComponentName className) {
             // This is called when the connection with the service has been
             // unexpectedly disconnected -- that is, its process crashed.
-            iServerBrokerService = null;
-            mPlatformServiceIsBound = false;
+            doUnbindService();
+            connectApp.onConnectClientServiceUnbind();
             logger.info("ISERVERBROKERSERVICE disconnected");
             // notify app
-            connectApp.onConnectClientServiceUnbind();
         }
     };
 
@@ -259,7 +254,9 @@ public class ConnectClientService extends Service {
         try {
             //Log.d(TAG, "Before init intent.componentName");
             //Log.d(TAG, "Before bindService");
-            return bindService(intent, mPlatformServiceConnection, BIND_AUTO_CREATE);
+            getApplicationContext().bindService(intent, mPlatformServiceConnection, BIND_AUTO_CREATE);
+            startService(intent);
+            return true;
         } catch (SecurityException e) {
             e.printStackTrace();
             logger.info("can't bind to ISERVERBROKERSERVICE, check permission in Manifest");
@@ -271,11 +268,14 @@ public class ConnectClientService extends Service {
     }
 
     void doUnbindService() {
-        if (mPlatformServiceIsBound) {
-            // Detach our existing connection.
+        // Detach our existing connection.
+        mPlatformServiceIsBound = false;
+        iServerBrokerService = null;
+        try {
             unbindService(mPlatformServiceConnection);
-            mPlatformServiceIsBound = false;
             logger.info("Unbinding.");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

@@ -2,11 +2,15 @@ package world.libertaria.sdk.android.client;
 
 import android.app.ActivityManager;
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
+import android.util.Log;
 
 import org.libertaria.world.global.Module;
 import org.libertaria.world.services.EnabledServices;
@@ -17,8 +21,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.lang.ref.WeakReference;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
@@ -30,6 +35,7 @@ import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import world.libertaria.shared.library.global.client.ConnectApplication;
 
 import static world.libertaria.shared.library.global.client.IntentBroadcastConstants.ACTION_IOP_SERVICE_CONNECTED;
+import static world.libertaria.shared.library.global.client.IntentBroadcastConstants.ACTION_IOP_SERVICE_DISCONNECTED;
 
 /**
  * Created by furszy on 7/28/17.
@@ -41,11 +47,12 @@ public class ConnectApp extends Application implements ConnectApplication {
 
     public static final String INTENT_ACTION_ON_SERVICE_CONNECTED = "service_connected";
 
-    private ClientServiceConnectHelper connectHelper;
     protected LocalBroadcastManager broadcastManager;
     protected ActivityManager activityManager;
-    private WeakReference<ConnectClientService> clientService;
+    private ConnectClientService clientService;
     private CopyOnWriteArrayList<ConnectListener> connectListeners;
+
+    private AtomicBoolean isConnected = new AtomicBoolean(false);
 
     public interface ConnectListener {
 
@@ -54,11 +61,28 @@ public class ConnectApp extends Application implements ConnectApplication {
         void onPlatformDisconnected(Context context);
     }
 
+    public ServiceConnection profServiceConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder binder) {
+            Log.d(this.toString(), "profile service connected " + className);
+            ConnectClientService.ConnectBinder myBinder = (ConnectClientService.ConnectBinder) binder;
+            ConnectApp.this.clientService = myBinder.getService();
+            onConnectClientServiceBind(clientService);
+            isConnected.set(true);
+        }
+
+        //binder comes from server to communicate with method's of
+        public void onServiceDisconnected(ComponentName className) {
+            Log.d(this.toString(), "profile service disconnected " + className);
+            isConnected.set(false);
+            unbindService(profServiceConnection);
+        }
+    };
 
     @Override
     public void onCreate() {
         super.onCreate();
         initLogging();
+        Thread.setDefaultUncaughtExceptionHandler(new GlobalExceptionHandler()); //Initialize global handler.
         logger = LoggerFactory.getLogger(ConnectApp.class);
         activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         // This is just for now..
@@ -82,23 +106,7 @@ public class ConnectApp extends Application implements ConnectApplication {
 
         }
 
-        connectHelper = ClientServiceConnectHelper.init(this, new InitListener() {
-            @Override
-            public void onConnected() {
-                try {
-                    clientService = new WeakReference<>(connectHelper.getClient());
-                    onConnectClientServiceBind();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onDisconnected() {
-                connectHelper.unbindService(getBaseContext());
-                clientService.clear();
-            }
-        });
+        bindConnectService();
     }
 
     private boolean isPackageInstalled(String packagename, PackageManager packageManager) {
@@ -108,6 +116,12 @@ public class ConnectApp extends Application implements ConnectApplication {
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
+    }
+
+    private void bindConnectService() {
+        Intent intent = new Intent(this, ConnectClientService.class);
+        getApplicationContext().bindService(intent, profServiceConnection, Context.BIND_AUTO_CREATE);
+        startService(intent);
     }
 
     private void initLogging() {
@@ -161,10 +175,9 @@ public class ConnectApp extends Application implements ConnectApplication {
 
     protected final Module getModule(EnabledServices enabledService) {
         if (clientService == null) {
-            connectHelper.startProfileServerService();
-            clientService = new WeakReference<>(connectHelper.getClient());
+            return null;
         }
-        return clientService.get().getModule(enabledService);
+        return clientService.getModule(enabledService);
     }
 
     public final String getAppPackage() {
@@ -185,20 +198,20 @@ public class ConnectApp extends Application implements ConnectApplication {
 
     /**
      * Method to override reciving the bind notification
+     *
+     * @param clientService
      */
-    protected void onConnectClientServiceBind() {
-        if (ClientServiceConnectHelper.isConnected.get() && clientService != null && clientService.get() != null && clientService.get().mPlatformServiceIsBound) {
-            // notify connection
-            Intent intent = new Intent(ACTION_IOP_SERVICE_CONNECTED);
-            broadcastManager.sendBroadcast(intent);
-            // notify listeners
-            if (connectListeners != null) {
-                for (ConnectListener connectListener : connectListeners) {
-                    connectListener.onPlatformConnected(this);
-                }
+    protected void onConnectClientServiceBind(ConnectClientService clientService) {
+        this.clientService = clientService;
+        logger.info("Service is bound, notifying...");
+        // notify connection
+        Intent intent = new Intent(ACTION_IOP_SERVICE_CONNECTED);
+        getApplicationContext().sendBroadcast(intent);
+        // notify listeners
+        if (connectListeners != null) {
+            for (ConnectListener connectListener : connectListeners) {
+                connectListener.onPlatformConnected(this);
             }
-        } else {
-            logger.warn("onConnectClientServiceBind, isClientServiceBound: " + ClientServiceConnectHelper.isConnected.get() + ", mPlatformServiceIsBound " + (clientService != null ? clientService.get().toString() : null));
         }
     }
 
@@ -207,18 +220,18 @@ public class ConnectApp extends Application implements ConnectApplication {
      */
     protected void onConnectClientServiceUnbind() {
         // notify listeners
+        Intent intent = new Intent(ACTION_IOP_SERVICE_DISCONNECTED);
+        getApplicationContext().sendBroadcast(intent);
         if (connectListeners != null) {
             for (ConnectListener connectListener : connectListeners) {
                 connectListener.onPlatformDisconnected(this);
             }
         }
+        bindConnectService(); //Then we try to reconnect ASAP!
     }
 
     public boolean isConnectedToPlatform() {
-        if (clientService != null && clientService.get() != null) {
-            return clientService.get().mPlatformServiceIsBound;
-        }
-        return false;
+        return clientService != null && clientService.mPlatformServiceIsBound;
     }
 
     public void addConnectListener(ConnectListener connectListener) {
@@ -235,6 +248,6 @@ public class ConnectApp extends Application implements ConnectApplication {
     }
 
     public boolean isClientServiceBound() {
-        return ClientServiceConnectHelper.isConnected.get();
+        return isConnected.get();
     }
 }

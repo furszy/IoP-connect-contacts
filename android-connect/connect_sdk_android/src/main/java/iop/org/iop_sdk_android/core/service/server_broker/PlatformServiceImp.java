@@ -109,6 +109,8 @@ public class PlatformServiceImp extends Service implements PlatformService, Devi
     //CONSTANTS
     private static final String ACTION_SCHEDULE_SERVICE = "schedule_service";
     public static final String ACTION_BOOT_SERVICE = "boot_service";
+    private static Integer PLATFORM_SERVICE_ID = 1;
+
     //PRIVATE
     private Logger logger = LoggerFactory.getLogger(PlatformServiceImp.class);
 
